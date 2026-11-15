@@ -1,0 +1,3218 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>우리 모둠 행동 추천 앱 설계 도우미</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Malgun Gothic', sans-serif;
+      word-break: keep-all;
+    }
+
+    .btn-touch {
+      min-height: 44px;
+    }
+
+    .step-tab-active {
+      background-color: #0f766e;
+      color: #ffffff;
+      border-color: #0f766e;
+      box-shadow: 0 4px 10px -2px rgba(15, 118, 110, 0.28);
+    }
+
+    .step-tab-inactive {
+      background-color: #ffffff;
+      color: #334155;
+      border-color: #cbd5e1;
+    }
+
+    .step-tab-inactive:hover {
+      background-color: #f1f5f9;
+      border-color: #94a3b8;
+    }
+
+    @media print {
+      @page {
+        size: A4 portrait;
+        margin: 14mm;
+      }
+
+      body {
+        background: #ffffff !important;
+        color: #0f172a !important;
+        font-size: 10.5pt;
+        line-height: 1.45;
+      }
+
+      .no-print {
+        display: none !important;
+      }
+
+      .print-only {
+        display: block !important;
+      }
+
+      .print-section {
+        page-break-inside: avoid;
+        break-inside: avoid;
+        margin-bottom: 14px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th, td {
+        border: 1px solid #94a3b8;
+        padding: 6px 8px;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background-color: #f1f5f9 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+  <!-- ==================== 상단 헤더 & 작업 도구 바 ==================== -->
+  <header class="no-print bg-white border-b border-slate-200 sticky top-0 z-30 shadow-2xs">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-3.5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-2xl bg-teal-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+          </svg>
+        </div>
+        <div>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="text-xs font-extrabold tracking-wide px-2.5 py-0.5 rounded-full bg-teal-100 text-teal-800">
+              초등 6학년 실과·도덕 융합 프로젝트
+            </span>
+            <span id="saveStatusText" class="text-xs text-teal-800 font-semibold flex items-center gap-1.5 shrink-0">
+              <span class="w-2 h-2 rounded-full bg-teal-600 inline-block"></span>
+              <span>이 기기 브라우저에 자동 저장됨</span>
+            </span>
+          </div>
+          <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 mt-0.5">
+            우리 모둠 행동 추천 앱 설계 도우미
+          </h1>
+        </div>
+      </div>
+
+      <!-- 작업 파일 저장/불러오기 · 인쇄 · 초기화 버튼 -->
+      <div class="flex flex-wrap items-center gap-2">
+        <input type="file" id="importFileInput" accept=".json,application/json" class="hidden" onchange="handleImportFileSelected(event)" />
+
+        <button
+          type="button"
+          onclick="exportWorkFile()"
+          class="btn-touch px-3.5 py-2 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-900 border border-teal-200 font-bold text-xs sm:text-sm flex items-center gap-1.5 transition"
+          title="현재 작성한 내용을 작업 파일(.json)로 내려받아 보관합니다"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          </svg>
+          <span>작업 파일 저장</span>
+        </button>
+
+        <button
+          type="button"
+          onclick="triggerImportWorkFile()"
+          class="btn-touch px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 font-bold text-xs sm:text-sm flex items-center gap-1.5 transition"
+          title="저장해 둔 작업 파일(.json)을 불러옵니다"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+          </svg>
+          <span>작업 파일 불러오기</span>
+        </button>
+
+        <button
+          type="button"
+          onclick="printReport()"
+          class="btn-touch px-3.5 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-200 font-bold text-xs sm:text-sm flex items-center gap-1.5 transition"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+          </svg>
+          <span>기획서 인쇄</span>
+        </button>
+
+        <button
+          type="button"
+          onclick="openModal('resetModal')"
+          class="btn-touch px-3 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs sm:text-sm transition"
+        >
+          새로 시작
+        </button>
+      </div>
+    </div>
+
+    <!-- 브라우저 저장 경고 배너 -->
+    <div id="storageErrorBanner" class="hidden bg-rose-600 text-white text-xs sm:text-sm font-bold px-4 py-2 text-center">
+      ⚠️ 현재 브라우저 저장 공간에 자동 저장할 수 없습니다. 작성한 내용을 잃어버리지 않도록 상단의 [작업 파일 저장] 버튼을 꼭 눌러 파일로 보관해 주세요!
+    </div>
+  </header>
+
+  <!-- ==================== 메인 4단계 탭 내비게이션 & 본문 ==================== -->
+  <main class="no-print flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
+
+    <!-- 4단계 전환 탭 -->
+    <nav aria-label="설계 단계 선택" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+      <button
+        type="button"
+        id="tab-btn-1"
+        onclick="switchStep(1)"
+        class="btn-touch step-tab-active rounded-2xl border-2 p-3.5 text-left flex items-center gap-3 transition"
+      >
+        <span class="w-8 h-8 rounded-xl bg-teal-800/20 flex items-center justify-center font-extrabold text-sm shrink-0">1</span>
+        <div>
+          <div class="text-xs opacity-85 font-semibold">STEP 1 · 기획</div>
+          <div class="font-extrabold text-base">문제와 수칙 정리</div>
+        </div>
+      </button>
+
+      <button
+        type="button"
+        id="tab-btn-2"
+        onclick="switchStep(2)"
+        class="btn-touch step-tab-inactive rounded-2xl border-2 p-3.5 text-left flex items-center gap-3 transition"
+      >
+        <span class="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center font-extrabold text-sm shrink-0">2</span>
+        <div>
+          <div class="text-xs opacity-85 font-semibold">STEP 2 · 알고리즘 설계</div>
+          <div class="font-extrabold text-base">30일 대체 활동·규칙 설계</div>
+        </div>
+      </button>
+
+      <button
+        type="button"
+        id="tab-btn-3"
+        onclick="switchStep(3)"
+        class="btn-touch step-tab-inactive rounded-2xl border-2 p-3.5 text-left flex items-center justify-between gap-2 transition"
+      >
+        <div class="flex items-center gap-3">
+          <span class="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center font-extrabold text-sm shrink-0">3</span>
+          <div>
+            <div class="text-xs opacity-85 font-semibold">STEP 3 · AI 제작 요청</div>
+            <div class="font-extrabold text-base">제작 프롬프트 정리</div>
+          </div>
+        </div>
+        <span id="tab3OutOfSyncBadge" class="hidden px-2 py-0.5 rounded-full bg-amber-400 text-amber-950 font-extrabold text-[11px] shrink-0">
+          갱신 필요
+        </span>
+      </button>
+
+      <button
+        type="button"
+        id="tab-btn-4"
+        onclick="switchStep(4)"
+        class="btn-touch step-tab-inactive rounded-2xl border-2 p-3.5 text-left flex items-center gap-3 transition"
+      >
+        <span class="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center font-extrabold text-sm shrink-0">4</span>
+        <div>
+          <div class="text-xs opacity-85 font-semibold">STEP 4 · 성찰과 검증</div>
+          <div class="font-extrabold text-base">H-A-H 검토·수정 기록</div>
+        </div>
+      </button>
+    </nav>
+
+    <!-- ===================================================================== -->
+    <!-- 1단계: 문제와 수칙 정리                                               -->
+    <!-- ===================================================================== -->
+    <section id="step-panel-1" class="space-y-6">
+      <div class="bg-white rounded-3xl border border-slate-200 p-5 sm:p-7 shadow-sm space-y-5">
+        <div class="border-b border-slate-100 pb-4">
+          <span class="inline-block px-3 py-1 rounded-full bg-teal-50 text-teal-800 font-bold text-xs mb-1">1단계 · 문제 발견 및 핵심 수칙 설정</span>
+          <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900">우리 모둠이 해결할 스마트폰 사용 문제와 대표 수칙</h2>
+          <p class="text-slate-600 text-sm sm:text-base mt-1">
+            모둠 토의와 자료 조사로 확인한 근거를 바탕으로 우리 앱의 기획 방향을 정리해 보세요.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div>
+            <label for="groupName" class="block text-sm font-extrabold text-slate-900 mb-1.5">
+              1. 모둠 이름
+            </label>
+            <input
+              type="text"
+              id="groupName"
+              placeholder="예: 6학년 2반 3모둠 (건강한 디지털 지킴이)"
+              class="w-full rounded-2xl border border-slate-300 px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-teal-500"
+            />
+          </div>
+
+          <div>
+            <label for="targetUser" class="block text-sm font-extrabold text-slate-900 mb-1.5">
+              2. 주요 사용자 (누구를 위한 앱인가요?)
+            </label>
+            <input
+              type="text"
+              id="targetUser"
+              placeholder="예: 방과 후 스마트폰을 오래 사용하는 초등학교 6학년 친구들"
+              class="w-full rounded-2xl border border-slate-300 px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-teal-500"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label for="problem" class="block text-sm font-extrabold text-slate-900 mb-1.5">
+            3. 해결하고 싶은 스마트폰 사용 문제
+          </label>
+          <textarea
+            id="problem"
+            rows="2"
+            placeholder="예: 걸어 다니면서 스마트폰을 보거나, 밤늦게까지 짧은 영상을 보느라 잠자는 시간이 줄어들고 가족과 대화할 시간이 부족한 문제"
+            class="w-full rounded-2xl border border-slate-300 px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-teal-500"
+          ></textarea>
+        </div>
+
+        <div>
+          <label for="evidence" class="block text-sm font-extrabold text-slate-900 mb-1.5">
+            4. 조사 근거와 출처 <span class="text-xs font-normal text-slate-500">(설문 결과, 공공기관 통계, 교과서 자료 등 출처를 함께 적어요)</span>
+          </label>
+          <textarea
+            id="evidence"
+            rows="2"
+            placeholder="예: 우리 반 24명 설문 조사 결과 18명이 잠들기 전 침대에서 스마트폰을 본다고 응답함 / 과학기술정보통신부 스마트폰 과의존 실태조사 참고"
+            class="w-full rounded-2xl border border-slate-300 px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-teal-500"
+          ></textarea>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2">
+          <div class="bg-teal-50/70 rounded-2xl border border-teal-200 p-4">
+            <label for="coreGuideline" class="block text-sm font-extrabold text-teal-950 mb-1.5">
+              5. 우리 모둠의 대표 추천 수칙
+            </label>
+            <input
+              type="text"
+              id="coreGuideline"
+              placeholder="예: 하루 30분, 스마트폰을 내려놓고 몸과 마음이 즐거운 대체 활동 실천하기"
+              class="w-full rounded-xl border border-teal-300 bg-white px-3.5 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-teal-500"
+            />
+          </div>
+
+          <div class="bg-indigo-50/70 rounded-2xl border border-indigo-200 p-4">
+            <label for="guidelineReason" class="block text-sm font-extrabold text-indigo-950 mb-1.5">
+              6. 이 수칙이 필요한 이유
+            </label>
+            <input
+              type="text"
+              id="guidelineReason"
+              placeholder="예: 무작정 참기보다 재미있는 대체 활동을 하나씩 해 보면 스스로 사용 시간을 조절할 수 있기 때문"
+              class="w-full rounded-xl border border-indigo-300 bg-white px-3.5 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div class="flex justify-end">
+        <button
+          type="button"
+          onclick="switchStep(2)"
+          class="btn-touch px-6 py-3.5 rounded-2xl bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-base flex items-center gap-2 shadow-sm transition"
+        >
+          <span>2단계: 30일 대체 활동·규칙 설계로 이동 →</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- 2단계: 30일 스마트폰 대체 활동 계획 & 추천 규칙 설계                    -->
+    <!-- ===================================================================== -->
+    <section id="step-panel-2" class="hidden space-y-6">
+      <!-- 2-1. 활동 수 현황 요약 & 버튼 바 -->
+      <div class="bg-white rounded-3xl border border-slate-200 p-5 sm:p-6 shadow-sm">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+          <div>
+            <span class="inline-block px-3 py-1 rounded-full bg-teal-50 text-teal-800 font-bold text-xs mb-1">2단계 · 30일 스마트폰 대체 활동 계획</span>
+            <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900">우리 모둠의 30일 대체 활동 만들기 및 검토</h2>
+            <p class="text-slate-600 text-sm sm:text-base mt-1">
+              학생이 직접 쓴 활동을 가장 먼저 담고, 30개보다 부족한 수만큼 <strong>AI 제안(검토 대기)</strong>을 받아 직접 채택·수정·제외해 보세요.
+            </p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onclick="openRuleFormModal(null, 'student')"
+              class="btn-touch px-4 py-3 rounded-2xl bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-sm sm:text-base flex items-center justify-center gap-1.5 shadow-sm transition"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+              <span>+ 학생 활동 직접 추가</span>
+            </button>
+
+            <button
+              type="button"
+              onclick="openAiRecommendModal()"
+              class="btn-touch px-4 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-sm sm:text-base flex items-center justify-center gap-1.5 shadow-sm transition"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+              </svg>
+              <span>부족한 활동 AI 추천받기</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 현황 카운터 4칸 -->
+        <div id="activityStatsBar" class="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-5">
+          <!-- JS로 렌더링됨 -->
+        </div>
+
+        <!-- 유사 활동 중복 검토 안내 배너 -->
+        <div id="duplicateWarningBanner" class="hidden mt-4 bg-amber-50 border-2 border-amber-300 rounded-2xl p-4 text-sm text-amber-950">
+          <!-- JS로 렌더링됨 -->
+        </div>
+      </div>
+
+      <!-- 2-2. AI 제안 '검토 대기' 목록 영역 -->
+      <div id="pendingReviewSection" class="bg-indigo-50/60 rounded-3xl border-2 border-indigo-200 p-5 sm:p-6 shadow-sm">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-indigo-200/80">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="px-2.5 py-0.5 rounded-full bg-indigo-600 text-white font-extrabold text-xs">학생 검토 필수</span>
+              <h3 class="text-lg sm:text-xl font-extrabold text-indigo-950">AI 제안 검토 대기 목록</h3>
+            </div>
+            <p class="text-xs sm:text-sm text-indigo-900 mt-1">
+              AI가 제안한 활동은 바로 확정되지 않습니다. 내용을 읽어 보고 <strong>[채택]</strong>, <strong>[수정 후 채택]</strong>, <strong>[제외]</strong> 중 하나를 선택해 주세요.
+            </p>
+          </div>
+          <div id="pendingCountBadge" class="text-sm font-extrabold text-indigo-900 bg-white px-3.5 py-1.5 rounded-xl border border-indigo-200 shrink-0">
+            검토 대기: 0개
+          </div>
+        </div>
+
+        <div id="pendingCardsContainer" class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- JS로 렌더링됨 -->
+        </div>
+      </div>
+
+      <!-- 2-3. 확정된 활동 목록 (학생 작성 + 채택/수정 후 채택된 AI 제안) -->
+      <div class="bg-white rounded-3xl border border-slate-200 p-5 sm:p-6 shadow-sm">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
+          <div>
+            <span class="inline-block px-3 py-0.5 rounded-full bg-emerald-100 text-emerald-900 font-bold text-xs mb-1">확정 활동 보관함</span>
+            <h3 class="text-lg sm:text-xl font-extrabold text-slate-900">채택 완료된 대체 활동 목록 (학생 작성 우선)</h3>
+            <p class="text-xs sm:text-sm text-slate-600 mt-0.5">
+              학생 작성 활동과 학생이 검토하여 채택한 활동이 모입니다. 필요하면 언제든 내용을 수정하거나 제외 상태로 옮길 수 있습니다.
+            </p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button
+              type="button"
+              onclick="toggleExcludedDrawer()"
+              id="toggleExcludedBtn"
+              class="btn-touch px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs sm:text-sm transition"
+            >
+              제외된 활동 보기 (0)
+            </button>
+          </div>
+        </div>
+
+        <!-- 제외된 활동 접이식 영역 -->
+        <div id="excludedCardsDrawer" class="hidden mt-4 bg-slate-100/80 rounded-2xl p-4 border border-slate-200">
+          <div class="flex items-center justify-between mb-2.5">
+            <span class="text-sm font-extrabold text-slate-700">제외 처리된 활동 목록 (다시 채택하거나 부족한 수만큼 재추천 가능)</span>
+          </div>
+          <div id="excludedCardsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <!-- JS로 렌더링됨 -->
+          </div>
+        </div>
+
+        <!-- 확정된 활동 카드 리스트 -->
+        <div id="ruleCardsContainer" class="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- JS로 렌더링됨 -->
+        </div>
+      </div>
+
+      <!-- 2-4. 1~30일 날짜별 배치 및 초과 시 30개 선택 관리 -->
+      <div class="bg-white rounded-3xl border-2 border-teal-200 p-5 sm:p-6 shadow-sm">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+          <div>
+            <span class="inline-block px-3 py-1 rounded-full bg-teal-100 text-teal-900 font-bold text-xs mb-1">1~30일 일정표 구성</span>
+            <h3 class="text-lg sm:text-xl font-extrabold text-slate-900">1일차 ~ 30일차 스마트폰 대체 활동 배치표</h3>
+            <p class="text-slate-600 text-xs sm:text-sm mt-0.5">
+              확정된 활동을 1일부터 30일까지 순서대로 배치하고 위·아래 버튼으로 날짜 순서를 바꿀 수 있습니다.
+            </p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onclick="syncScheduleWithAccepted(true)"
+              class="btn-touch px-3.5 py-2 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-900 border border-teal-200 font-bold text-xs sm:text-sm transition"
+            >
+              학생 작성 우선순으로 자동 채우기
+            </button>
+          </div>
+        </div>
+
+        <!-- 30개 초과 시 사용자 직접 선택 안내 패널 -->
+        <div id="overThirtySelectorPanel" class="hidden mt-4 bg-amber-50 border-2 border-amber-400 rounded-2xl p-4 sm:p-5">
+          <!-- JS로 렌더링됨 -->
+        </div>
+
+        <!-- 1~30일 배치 슬롯 목록 -->
+        <div id="thirtyDayScheduleContainer" class="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          <!-- JS로 렌더링됨 -->
+        </div>
+      </div>
+
+      <!-- 작동 흐름 시각화 영역 -->
+      <div class="bg-white rounded-3xl border border-slate-200 p-5 sm:p-6 shadow-sm">
+        <div class="mb-4">
+          <span class="inline-block px-3 py-1 rounded-full bg-indigo-50 text-indigo-800 font-bold text-xs mb-1">알고리즘 한눈에 보기</span>
+          <h3 class="text-lg sm:text-xl font-extrabold text-slate-900">우리 앱의 날짜별 행동 추천 작동 흐름도</h3>
+          <p class="text-slate-600 text-sm mt-0.5">배치된 1~30일 활동이 앱에서 어떤 순서와 조건으로 작동하는지 자동으로 보여 줍니다.</p>
+        </div>
+        <div id="flowDiagramContainer" class="bg-slate-50 rounded-2xl border border-slate-200 p-4 sm:p-6 overflow-x-auto">
+          <!-- JS로 흐름도 렌더링됨 -->
+        </div>
+      </div>
+
+      <!-- 간단한 미리보기 시험 영역 -->
+      <div class="bg-white rounded-3xl border-2 border-teal-200 p-5 sm:p-6 shadow-sm">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+          <div>
+            <span class="inline-block px-3 py-1 rounded-full bg-emerald-100 text-emerald-900 font-bold text-xs mb-1">미리보기 시험장</span>
+            <h3 class="text-lg sm:text-xl font-extrabold text-slate-900">날짜별 대체 활동 및 피드백 시험해 보기</h3>
+            <p class="text-slate-600 text-sm mt-0.5">
+              날짜를 선택해 활동 방법·준비물·실내 대안을 확인하고, 두 버튼을 눌러 피드백 문구를 시험해 보세요.
+            </p>
+          </div>
+          <!-- 시험할 날짜/카드 선택 드롭다운 -->
+          <div id="previewSelectorWrap" class="flex items-center gap-2">
+            <label for="previewCardSelect" class="text-sm font-bold text-slate-700 shrink-0">시험할 일정:</label>
+            <select
+              id="previewCardSelect"
+              onchange="renderPreviewBox()"
+              class="btn-touch rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500 max-w-xs"
+            ></select>
+          </div>
+        </div>
+
+        <!-- 스마트폰 모양의 간단한 시험 화면 -->
+        <div id="previewBoxContainer" class="max-w-md mx-auto bg-slate-900 rounded-[2rem] p-3 shadow-lg">
+          <div class="bg-white rounded-[1.5rem] p-5 min-h-[340px] flex flex-col justify-between">
+            <div id="previewScreenContent">
+              <!-- JS로 시험 화면 렌더링됨 -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 이전/다음 단계 이동 버튼 -->
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <button
+          type="button"
+          onclick="switchStep(1)"
+          class="btn-touch px-5 py-3 rounded-2xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-bold text-base flex items-center gap-2 transition"
+        >
+          <span>← 1단계: 문제와 수칙 정리</span>
+        </button>
+        <button
+          type="button"
+          onclick="switchStep(3)"
+          class="btn-touch px-6 py-3 rounded-2xl bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-base flex items-center gap-2 shadow-sm transition"
+        >
+          <span>3단계: 제작용 프롬프트 정리로 이동 →</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- 3단계: 제작용 프롬프트 정리                                           -->
+    <!-- ===================================================================== -->
+    <section id="step-panel-3" class="hidden space-y-6">
+      <div class="bg-white rounded-3xl border border-slate-200 p-5 sm:p-7 shadow-sm space-y-4">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+          <div>
+            <span class="inline-block px-3 py-1 rounded-full bg-teal-50 text-teal-800 font-bold text-xs mb-1">3단계 · AI 앱 제작 요청 프롬프트</span>
+            <div class="flex flex-wrap items-center gap-2">
+              <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900">우리 모둠의 30일 앱 제작 프롬프트</h2>
+              <span id="promptEditedBadge" class="hidden px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-800 font-bold text-xs">
+                직접 수정됨
+              </span>
+            </div>
+            <p class="text-slate-600 text-sm sm:text-base mt-1">
+              1단계 기획 내용과 2단계에서 최종 확정한 1~30일 대체 활동(출처 구분 포함)이 자동으로 반영됩니다.
+            </p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onclick="rebuildPromptFromInputs(true)"
+              class="btn-touch px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 font-bold text-xs sm:text-sm transition"
+            >
+              1·2단계 내용으로 새로고침
+            </button>
+            <button
+              type="button"
+              onclick="copyFinalPrompt()"
+              class="btn-touch px-5 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-xs sm:text-sm shadow-sm transition"
+            >
+              📋 프롬프트 전체 복사하기
+            </button>
+          </div>
+        </div>
+
+        <!-- 프롬프트 수동 수정 후 앞 단계가 바뀌었을 때 안내 배너 -->
+        <div id="promptOutOfSyncBanner" class="hidden bg-amber-50 border-2 border-amber-300 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div class="text-sm text-amber-950">
+            <strong>⚠️ 1단계 또는 2단계 내용이 변경되었습니다.</strong> 직접 수정한 프롬프트에 최신 내용을 반영하려면 오른쪽 버튼을 눌러 다시 생성해 주세요.
+          </div>
+          <button
+            type="button"
+            onclick="rebuildPromptFromInputs(true)"
+            class="btn-touch px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-xs sm:text-sm shrink-0"
+          >
+            최신 내용으로 다시 만들기
+          </button>
+        </div>
+
+        <div>
+          <label for="finalPromptTextarea" class="sr-only">제작 프롬프트 내용</label>
+          <textarea
+            id="finalPromptTextarea"
+            rows="18"
+            oninput="onPromptManualEdit(this.value)"
+            class="w-full rounded-2xl border border-slate-300 bg-slate-50 p-4 text-sm sm:text-base font-mono text-slate-800 leading-relaxed focus:outline-none focus:ring-2 focus:ring-teal-500 focus:bg-white"
+          ></textarea>
+          <p id="copyFeedbackMsg" class="hidden mt-2 text-sm font-bold text-teal-700"></p>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <button
+          type="button"
+          onclick="switchStep(2)"
+          class="btn-touch px-5 py-3 rounded-2xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-bold text-base transition"
+        >
+          ← 2단계: 30일 대체 활동 설계
+        </button>
+        <button
+          type="button"
+          onclick="switchStep(4)"
+          class="btn-touch px-6 py-3 rounded-2xl bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-base shadow-sm transition"
+        >
+          4단계: H-A-H 검토·수정 기록으로 이동 →
+        </button>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- 4단계: H-A-H (인간 → AI → 인간) 검토·수정 기록                        -->
+    <!-- ===================================================================== -->
+    <section id="step-panel-4" class="hidden space-y-6">
+      <div class="bg-white rounded-3xl border border-slate-200 p-5 sm:p-7 shadow-sm space-y-5">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+          <div>
+            <span class="inline-block px-3 py-1 rounded-full bg-indigo-50 text-indigo-800 font-bold text-xs mb-1">4단계 · 인간-AI 협업 성찰 (H-A-H)</span>
+            <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900">AI 제안과 앱 결과물을 검토하고 고친 기록</h2>
+            <p class="text-slate-600 text-sm sm:text-base mt-1">
+              AI의 도움을 받을 때 학생이 주체적으로 판단하고 수정한 과정(Human → AI → Human)을 기록해 보세요.
+            </p>
+          </div>
+          <button
+            type="button"
+            onclick="addHahRecord()"
+            class="btn-touch px-4 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-sm shrink-0 transition"
+          >
+            + 검토 기록 추가하기
+          </button>
+        </div>
+
+        <div id="hahRecordsContainer" class="space-y-4">
+          <!-- JS로 렌더링됨 -->
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <button
+          type="button"
+          onclick="switchStep(3)"
+          class="btn-touch px-5 py-3 rounded-2xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-bold text-base transition"
+        >
+          ← 3단계: 제작 프롬프트 정리
+        </button>
+        <button
+          type="button"
+          onclick="printReport()"
+          class="btn-touch px-6 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-base shadow-sm transition"
+        >
+          🖨️ 전체 기획서 및 H-A-H 기록 인쇄하기
+        </button>
+      </div>
+    </section>
+  </main>
+
+  <!-- ==================== A4 인쇄 전용 영역 ==================== -->
+  <div id="printArea" class="print-only hidden"></div>
+
+  <!-- ==================== 하단 토스트 알림 ==================== -->
+  <div id="workFileToast" class="no-print hidden fixed bottom-5 left-1/2 -translate-x-1/2 z-50 px-4 py-3 rounded-2xl shadow-lg border font-bold text-sm bg-slate-900 text-white border-slate-700">
+    <span id="workFileToastMsg"></span>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- 모달 1: 30일 대체 활동 카드 추가 / 수정 모달                           -->
+  <!-- ===================================================================== -->
+  <div id="ruleFormModal" class="no-print hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white rounded-3xl max-w-3xl w-full p-5 sm:p-6 shadow-2xl border border-slate-200 my-auto max-h-[92vh] overflow-y-auto">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div>
+          <span id="ruleModalSourceBadge" class="inline-block px-2.5 py-0.5 rounded-full bg-teal-100 text-teal-800 font-bold text-xs mb-1">학생 작성</span>
+          <h3 id="ruleModalTitle" class="text-xl font-extrabold text-slate-900">새 대체 활동 추가하기</h3>
+        </div>
+        <button type="button" onclick="closeModal('ruleFormModal')" class="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 font-bold">✕</button>
+      </div>
+
+      <form id="ruleCardForm" onsubmit="saveRuleCard(event)" class="space-y-4 mt-4">
+        <input type="hidden" id="editingRuleId" value="" />
+        <input type="hidden" id="editingRuleSource" value="student" />
+        <input type="hidden" id="editingRuleStatus" value="accepted" />
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+          <div class="sm:col-span-2">
+            <label for="cardGuideline" class="block text-sm font-extrabold text-slate-900 mb-1">
+              1. 활동 이름 <span class="text-rose-600">*</span>
+            </label>
+            <input
+              type="text"
+              id="cardGuideline"
+              required
+              placeholder="예: 보행 중 스마트폰 끄고 주변 풍경 3가지 찾기"
+              class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-teal-500"
+            />
+          </div>
+
+          <div>
+            <label for="cardDuration" class="block text-sm font-extrabold text-slate-900 mb-1">
+              2. 예상 소요 시간 <span class="text-rose-600">*</span>
+            </label>
+            <input
+              type="text"
+              id="cardDuration"
+              required
+              placeholder="예: 약 15분"
+              class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-teal-500"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label for="cardMethod" class="block text-sm font-extrabold text-slate-900 mb-1">
+            3. 구체적인 실천 방법 <span class="text-rose-600">*</span>
+          </label>
+          <textarea
+            id="cardMethod"
+            rows="2"
+            required
+            placeholder="예: 현관을 나서기 전에 스마트폰 화면을 끄고 가방에 넣은 뒤, 학교까지 걸으며 계절 변화나 안전 표지판 3가지를 찾아봅니다."
+            class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-teal-500"
+          ></textarea>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <div>
+            <label for="cardMaterials" class="block text-sm font-extrabold text-slate-900 mb-1">
+              4. 준비물 <span class="text-rose-600">*</span>
+            </label>
+            <input
+              type="text"
+              id="cardMaterials"
+              required
+              placeholder="예: 없음 (가방 또는 주머니)"
+              class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-teal-500"
+            />
+          </div>
+
+          <div>
+            <label for="cardIndoorAlt" class="block text-sm font-extrabold text-slate-900 mb-1">
+              5. 실내 대안 또는 다른 실천 방법 <span class="text-rose-600">*</span>
+            </label>
+            <input
+              type="text"
+              id="cardIndoorAlt"
+              required
+              placeholder="예: 비가 오면 창밖 풍경 관찰하기 또는 복도에서 바른 자세로 걷기"
+              class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-teal-500"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label for="cardReason" class="block text-sm font-extrabold text-slate-900 mb-1">
+            6. 추천 이유 <span class="text-slate-500 font-normal text-xs">(의학적·건강 효과를 과장하거나 단정하지 않고 적어요)</span> <span class="text-rose-600">*</span>
+          </label>
+          <textarea
+            id="cardReason"
+            rows="2"
+            required
+            placeholder="예: 걸으면서 화면을 보지 않으면 주변 위험을 미리 살펴 보행 안전을 지키는 데 도움이 되기 때문이에요."
+            class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-teal-500"
+          ></textarea>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <div class="bg-emerald-50/70 p-3.5 rounded-2xl border border-emerald-200">
+            <label for="cardSuccessFeedback" class="block text-sm font-extrabold text-emerald-950 mb-1">
+              7. 실천했을 때 피드백 <span class="text-rose-600">*</span>
+            </label>
+            <textarea
+              id="cardSuccessFeedback"
+              rows="2"
+              required
+              placeholder="예: 멋져요! 스마트폰 대신 주변 세상을 살피며 안전하게 걸었네요!"
+              class="w-full rounded-xl border border-emerald-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            ></textarea>
+          </div>
+
+          <div class="bg-amber-50/70 p-3.5 rounded-2xl border border-amber-200">
+            <label for="cardHardFeedback" class="block text-sm font-extrabold text-amber-950 mb-1">
+              8. 실천이 어려웠을 때 피드백 <span class="text-rose-600">*</span>
+            </label>
+            <textarea
+              id="cardHardFeedback"
+              rows="2"
+              required
+              placeholder="예: 괜찮아요! 처음엔 습관을 바꾸기 어려울 수 있어요. 내일은 횡단보도 앞에서만이라도 화면을 꺼 볼까요?"
+              class="w-full rounded-xl border border-amber-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+            ></textarea>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+          <button
+            type="button"
+            onclick="closeModal('ruleFormModal')"
+            class="btn-touch px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-base"
+          >
+            취소
+          </button>
+          <button
+            type="submit"
+            id="ruleFormSubmitBtn"
+            class="btn-touch px-6 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-base shadow-sm"
+          >
+            활동 저장하기
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- 모달 2: 부족한 활동 AI 추천받기 모달                                   -->
+  <!-- ===================================================================== -->
+  <div id="aiRecommendModal" class="no-print hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white rounded-3xl max-w-3xl w-full p-5 sm:p-6 shadow-2xl border border-slate-200 my-auto max-h-[92vh] overflow-y-auto space-y-5">
+      <div class="flex items-start justify-between gap-3 pb-3 border-b border-slate-100">
+        <div>
+          <span class="inline-block px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-800 font-bold text-xs mb-1">부족한 활동 AI 제안 받기 (검토 대기 등록)</span>
+          <h3 class="text-xl font-extrabold text-slate-900">부족한 <span id="aiNeededCountTitle" class="text-indigo-600">0</span>개 활동 AI 추천받기</h3>
+          <p class="text-xs sm:text-sm text-slate-600 mt-1">
+            이 웹앱은 외부 AI 서버에 직접 연결되어 있지 않습니다. 아래 <strong>방법 A(외부 AI 요청 프롬프트 생성 후 결과 가져오기)</strong>를 사용하거나, 인터넷·외부 AI 사용이 어려운 교실에서는 <strong>방법 B(기본 활동 예시 목록에서 가져오기)</strong>를 선택하세요.
+          </p>
+        </div>
+        <button type="button" onclick="closeModal('aiRecommendModal')" class="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 font-bold shrink-0">✕</button>
+      </div>
+
+      <!-- 부족 개수 안내 박스 -->
+      <div id="aiNeededStatusBox" class="bg-indigo-50 border border-indigo-200 rounded-2xl p-4 text-sm text-indigo-950">
+        <!-- JS로 렌더링됨 -->
+      </div>
+
+      <!-- 방법 A: 외부 AI 프롬프트 생성 및 결과 JSON 붙여넣기 -->
+      <div class="bg-slate-50 rounded-2xl border border-slate-200 p-4 space-y-3">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <span class="text-xs font-extrabold px-2 py-0.5 rounded bg-indigo-600 text-white">방법 A · 권장</span>
+            <h4 class="text-base font-extrabold text-slate-900 mt-1">외부 AI에 요청할 프롬프트 복사 후 결과 가져오기</h4>
+          </div>
+          <button
+            type="button"
+            onclick="copyAiRequestPrompt()"
+            class="btn-touch px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs sm:text-sm shrink-0 transition"
+          >
+            AI 추천 요청 프롬프트 복사
+          </button>
+        </div>
+        <p class="text-xs text-slate-600 leading-relaxed">
+          ① 위 버튼을 눌러 프롬프트를 복사한 뒤 외부 AI(챗GPT, 제미나이 등)에 붙여넣으세요. ② AI가 만들어 준 <strong>JSON 답변 전체</strong>를 아래 칸에 붙여넣으면 <strong>‘검토 대기’</strong> 목록에 들어옵니다.
+        </p>
+        <textarea
+          id="aiRequestPromptPreview"
+          rows="5"
+          readonly
+          class="w-full rounded-xl border border-slate-300 bg-white p-3 text-xs font-mono text-slate-700 focus:outline-none"
+        ></textarea>
+
+        <div>
+          <label for="aiJsonPasteInput" class="block text-xs sm:text-sm font-extrabold text-slate-800 mb-1">
+            외부 AI가 응답한 JSON 결과 붙여넣기:
+          </label>
+          <textarea
+            id="aiJsonPasteInput"
+            rows="4"
+            placeholder='외부 AI가 알려준 [ { "guideline": "...", ... } ] 형태의 JSON 결과를 여기에 붙여넣으세요.'
+            class="w-full rounded-xl border border-indigo-300 bg-white p-3 text-xs font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          ></textarea>
+          <div class="mt-2 flex flex-wrap items-center justify-between gap-2">
+            <span id="aiPasteErrorMsg" class="text-xs font-bold text-rose-600"></span>
+            <button
+              type="button"
+              onclick="importAiJsonSuggestions()"
+              class="btn-touch px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm transition"
+            >
+              붙여넣은 AI 제안을 ‘검토 대기’에 추가하기
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 방법 B: 오프라인 교실용 기본 활동 아이디어 보따리 -->
+      <div class="bg-amber-50/70 rounded-2xl border border-amber-200 p-4 space-y-2.5">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <span class="text-xs font-extrabold px-2 py-0.5 rounded bg-amber-500 text-white">방법 B · 오프라인/외부 AI 미사용 교실 보조</span>
+            <h4 class="text-base font-extrabold text-slate-900 mt-1">미리 준비된 6학년 기본 활동 예시 보따리에서 가져오기</h4>
+          </div>
+          <button
+            type="button"
+            onclick="loadOfflineSampleSuggestions()"
+            class="btn-touch px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-xs sm:text-sm shrink-0 transition"
+          >
+            기본 활동 예시에서 부족한 수만큼 가져오기
+          </button>
+        </div>
+        <p class="text-xs text-slate-700 leading-relaxed">
+          ※ 이 버튼은 <strong>실시간 AI 생성이 아니라</strong>, 수업 도우미에 미리 수록된 초등 6학년용 대체 활동 예시 중 기존 활동과 겹치지 않는 항목을 골라 <strong>‘검토 대기’</strong> 목록에 넣어 주는 보조 기능입니다. 가져온 뒤에도 학생이 직접 채택·수정·제외를 결정합니다.
+        </p>
+      </div>
+
+      <div class="flex justify-end pt-2 border-t border-slate-100">
+        <button
+          type="button"
+          onclick="closeModal('aiRecommendModal')"
+          class="btn-touch px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-sm"
+        >
+          닫기
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- 모달 3: 활동 카드 완전 삭제 확인 모달                                  -->
+  <!-- ===================================================================== -->
+  <div id="deleteCardModal" class="no-print hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+      <h3 class="text-lg font-extrabold text-slate-900">이 활동을 목록에서 완전히 삭제할까요?</h3>
+      <p class="text-sm text-slate-600">
+        완전히 삭제하면 복구할 수 없습니다. 나중에 다시 검토하거나 보관하려면 삭제 대신 <strong>[제외]</strong> 버튼을 사용하는 것이 좋습니다.
+      </p>
+      <div class="flex justify-end gap-2 pt-2">
+        <button type="button" onclick="closeModal('deleteCardModal')" class="btn-touch px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm">
+          취소
+        </button>
+        <button type="button" id="confirmDeleteCardBtn" class="btn-touch px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-sm">
+          완전 삭제하기
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- 모달 4: 작업 파일 불러오기 확인 모달                                   -->
+  <!-- ===================================================================== -->
+  <div id="importConfirmModal" class="no-print hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+      <h3 class="text-lg font-extrabold text-slate-900">작업 파일을 불러올까요?</h3>
+      <p class="text-sm text-slate-600">
+        선택한 파일(<strong id="importFileNameText" class="text-slate-900"></strong>)의 내용으로 현재 화면의 내용을 덮어씁니다. 현재 작성 중인 내용이 있다면 먼저 [작업 파일 저장]으로 백업해 주세요.
+      </p>
+      <div class="flex justify-end gap-2 pt-2">
+        <button type="button" onclick="closeModal('importConfirmModal')" class="btn-touch px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm">
+          취소
+        </button>
+        <button type="button" onclick="confirmImportWorkFile()" class="btn-touch px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-sm">
+          불러오기 적용
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- 모달 5: 전체 초기화 확인 모달                                          -->
+  <!-- ===================================================================== -->
+  <div id="resetModal" class="no-print hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+      <h3 class="text-lg font-extrabold text-rose-700">모든 내용을 지우고 새로 시작할까요?</h3>
+      <p class="text-sm text-slate-600">
+        1~4단계에 입력한 모든 내용과 30일 대체 활동 목록, H-A-H 기록이 초기화됩니다. 필요하다면 먼저 [작업 파일 저장] 버튼을 눌러 파일로 저장해 두세요.
+      </p>
+      <div class="flex justify-end gap-2 pt-2">
+        <button type="button" onclick="closeModal('resetModal')" class="btn-touch px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm">
+          취소
+        </button>
+        <button type="button" onclick="confirmResetAll()" class="btn-touch px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-sm">
+          모두 지우고 새로 시작
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 애플리케이션 스크립트 ==================== -->
+  <script>
+    const STORAGE_KEY = 'grade6_smartphone_action_app_planner_v1';
+    const TARGET_DAYS = 30;
+    let storageFailed = false;
+    let pendingImportData = null;
+    let showExcludedDrawer = false;
+    const previewTestState = {
+      selectedOutcome: null
+    };
+
+    const OFFLINE_SAMPLE_ACTIVITIES = [
+      {
+        guideline: '현관문 나서기 전 스마트폰 가방에 넣고 등굣길 풍경 3가지 찾기',
+        method: '집을 나서기 전에 스마트폰 화면을 끄고 가방 안에 넣은 뒤, 학교까지 걸으면서 계절 꽃, 안전 표지판, 새로 생긴 가게 등 3가지를 찾아봅니다.',
+        duration: '약 15분',
+        materials: '없음 (가방 또는 주머니)',
+        indoorAlt: '비가 오거나 미세먼지가 심할 때는 창밖 풍경 3가지 관찰하기 또는 복도에서 바른 자세로 걷기',
+        reason: '걸으면서 화면을 보지 않으면 주변 차량과 위험 요소를 미리 살필 수 있어 보행 안전을 지키는 데 도움이 됩니다.',
+        successFeedback: '멋져요! 화면 대신 주변 세상을 살피며 안전하게 등교했네요!',
+        hardFeedback: '괜찮아요! 처음엔 습관을 바꾸기 어려울 수 있어요. 내일은 횡단보도 앞에서만이라도 화면을 꺼 볼까요?'
+      },
+      {
+        guideline: '가족과 저녁 식사 시간 30분 동안 스마트폰 거실 바구니에 두기',
+        method: '저녁 식사를 시작하기 전 가족 모두 스마트폰을 무음으로 바꾸어 지정된 바구니에 넣고, 오늘 학교에서 있었던 일을 한 가지씩 이야기합니다.',
+        duration: '약 30분',
+        materials: '스마트폰 보관 바구니(또는 식탁 밖 선반)',
+        indoorAlt: '혼자 식사할 때는 식탁에서 스마트폰을 치우고 음식의 맛과 향에 집중하며 천천히 식사하기',
+        reason: '식사 중 화면을 보지 않으면 가족과 눈을 맞추며 대화할 기회가 늘어나고 식사에 집중할 수 있습니다.',
+        successFeedback: '훌륭해요! 가족과 눈을 맞추며 따뜻한 대화 시간을 보냈네요!',
+        hardFeedback: '아쉬워도 괜찮아요. 다음 식사 때는 10분만이라도 화면을 멀리 두고 대화를 시작해 보아요.'
+      },
+      {
+        guideline: '잠들기 40분 전 스마트폰 충전기를 책상 위에 두고 종이책 10쪽 읽기',
+        method: '잠자리 옆에 스마트폰을 두지 않고 거실이나 책상 위 충전기에 꽂아 둔 뒤, 침대에서는 평소 읽고 싶었던 종이책이나 만화책을 10쪽 읽습니다.',
+        duration: '약 20~40분',
+        materials: '읽고 싶은 종이책 1권',
+        indoorAlt: '종이책이 없을 때는 오늘 감사했던 일 3가지를 공책에 짧게 적거나 조용히 눈을 감고 하루 돌아보기',
+        reason: '잠들기 전 화면 자극을 줄이면 밤늦게까지 영상을 보느라 취침 시간이 늦어지는 일을 막는 데 도움이 됩니다.',
+        successFeedback: '대단해요! 스마트폰 없이 차분하게 하루를 마무리했군요!',
+        hardFeedback: '오늘 조금 늦었어도 괜찮아요. 내일은 잠들기 15분 전부터 충전기에 꽂아 두는 것부터 도전해 봐요.'
+      },
+      {
+        guideline: '방과 후 20분 동안 줄넘기 또는 제자리 걷기·스트레칭 하기',
+        method: '숙제를 시작하기 전 타이머를 20분 맞추고, 스마트폰 대신 줄넘기를 하거나 실내에서 팔다리 스트레칭과 제자리 걷기를 합니다.',
+        duration: '약 20분',
+        materials: '줄넘기(실외) 또는 편한 복장(실내)',
+        indoorAlt: '집 안에서는 층간소음이 나지 않도록 매트 위에서 기지개 켜기, 어깨 돌리기, 제자리 균형 잡기 동작 하기',
+        reason: '오래 앉아 화면만 보는 시간을 줄이고 몸을 가볍게 움직이면 기분을 전환하고 활력을 얻는 데 도움이 됩니다.',
+        successFeedback: '짝짝짝! 몸을 움직이며 상쾌하게 에너지를 채웠네요!',
+        hardFeedback: '20분이 길게 느껴졌다면 내일은 5분 스트레칭부터 가볍게 시작해 보아요!'
+      },
+      {
+        guideline: 'A4 용지 한 장으로 종이비행기 접어 멀리 날리기 시합하기',
+        method: '스마트폰 게임 대신 이면지나 색종이로 각자 잘 날아가는 종이비행기를 접어 보고, 가족이나 친구와 누가 더 멀리·오래 날리는지 겨룹니다.',
+        duration: '약 20분',
+        materials: '이면지 또는 A4 용지 1~2장',
+        indoorAlt: '넓은 야외에 나가기 어려울 때는 거실이나 교실 뒤편에서 훌라후프나 방석 목표물 안에 비행기 착륙시키기',
+        reason: '손으로 직접 접고 날리며 시행착오를 겪는 놀이는 화면 없이도 친구·가족과 즐겁게 어울릴 수 있게 해 줍니다.',
+        successFeedback: '와우! 직접 접은 종이비행기로 멋진 비행을 성공했네요!',
+        hardFeedback: '원하는 만큼 멀리 날지 않았어도 괜찮아요. 날개 각도를 조금 바꿔서 다시 도전해 볼까요?'
+      },
+      {
+        guideline: '우리 집 주변 15분 산책하며 동네 나무와 구름 모양 관찰하기',
+        method: '스마트폰은 집에 두거나 주머니에 넣고 동네 공원이나 골목을 15분 걸으며, 하늘의 구름 모양과 나무 잎사귀 색깔을 관찰합니다.',
+        duration: '약 15~20분',
+        materials: '편한 운동화',
+        indoorAlt: '외출이 어려울 때는 베란다나 창문 밖으로 보이는 하늘의 구름 모양을 스케치북에 그려 보기',
+        reason: '가까운 화면에서 시선을 떼고 먼 풍경과 자연을 바라보면 답답한 기분을 환기하는 데 도움이 됩니다.',
+        successFeedback: '멋져요! 자연 속 풍경을 발견하며 여유로운 시간을 보냈네요!',
+        hardFeedback: '밖에 나가기 어려웠다면 창문을 열고 바깥 공기를 마시며 먼 곳을 1분간 바라보는 것부터 해 봐요.'
+      },
+      {
+        guideline: '연필과 공책으로 네 컷 만화 또는 오늘의 감정 일기 그리기',
+        method: '영상 시청 대신 공책에 네 칸을 나누어 오늘 가장 웃겼던 장면이나 기억에 남는 일을 짧은 말풍선과 그림으로 표현합니다.',
+        duration: '약 20분',
+        materials: '공책(또는 이면지), 연필, 색연필',
+        indoorAlt: '그림 그리기가 부담스러울 때는 오늘 기분을 날씨(맑음, 구름, 바람 등)로 표현하고 한 줄 이유 적기',
+        reason: '남이 만든 영상을 수동적으로 보는 대신 내 생각을 직접 그려 보면 창의력과 표현력을 기르는 데 도움이 됩니다.',
+        successFeedback: '최고예요! 나만의 이야기가 담긴 멋진 기록이 완성되었어요!',
+        hardFeedback: '그림이 완벽하지 않아도 괜찮아요. 막대 사람이나 한 줄 글로도 충분히 멋진 기록이 됩니다!'
+      },
+      {
+        guideline: '가족·친구와 보드게임 또는 끝말잇기·스무고개 놀이 하기',
+        method: '쉬는 시간이나 저녁 시간에 스마트폰 대신 보드게임(알까기, 오목, 카드게임)이나 말로 하는 끝말잇기·스무고개를 함께 즐깁니다.',
+        duration: '약 25분',
+        materials: '보드게임(없으면 종이와 펜으로 오목판 그리기)',
+        indoorAlt: '혼자 있을 때는 가로세로 낱말 퍼즐 풀기 또는 종이에 미로 직접 그려서 탈출 경로 찾기',
+        reason: '서로 규칙을 지키고 대화를 나누며 노는 과정은 스마트폰 없이도 깊은 즐거움을 느끼게 해 줍니다.',
+        successFeedback: '즐거웠겠네요! 화면 없이도 함께 웃으며 신나는 시간을 보냈어요!',
+        hardFeedback: '함께할 사람을 찾기 어려웠다면 다음 쉬는 시간에 짝꿍에게 3분 끝말잇기를 먼저 제안해 보세요!'
+      },
+      {
+        guideline: '내 책상 위 학용품 정리하고 내일 학교 준비물 미리 챙기기',
+        method: '스마트폰을 보며 시간을 보내는 대신 15분 타이머를 켜고 책상 위 연필꽂이와 책을 정돈한 뒤 내일 시간표에 맞춰 가방을 챙깁니다.',
+        duration: '약 15분',
+        materials: '내일 시간표, 책가방',
+        indoorAlt: '책상이 이미 깨끗하다면 필통 속 몽당연필과 지우개 정리하기 또는 사물함 정리 계획 세우기',
+        reason: '주변 환경을 정돈하고 내일 할 일을 미리 준비하면 아침 등교 시간을 여유롭고 안전하게 보낼 수 있습니다.',
+        successFeedback: '깔끔해요! 내일 아침을 상쾌하게 시작할 준비를 마쳤네요!',
+        hardFeedback: '한 번에 다 치우기 막막할 땐 책상 위 쓰레기 3개만 먼저 버리는 것부터 시작해 보아요.'
+      },
+      {
+        guideline: '가족을 위한 간단한 간식 차리기 또는 설거지 돕기',
+        method: '부모님 허락을 받아 과일 씻기, 물컵 준비하기, 식사 후 빈 그릇 싱크대로 옮기기 등 집안일 한 가지를 맡아 실천합니다.',
+        duration: '약 15분',
+        materials: '앞치마 또는 고무장갑(필요시)',
+        indoorAlt: '주방 정리가 어려울 때는 거실 쿠션 정돈하기, 신발장 신발 가지런히 놓기 등 다른 집안일 선택하기',
+        reason: '가족을 돕는 작은 행동을 실천하면 스마트폰 대신 가족과 따뜻한 고마움을 나눌 수 있습니다.',
+        successFeedback: '따뜻한 마음이 빛나요! 가족에게 큰 힘이 되는 멋진 실천이었어요!',
+        hardFeedback: '바빠서 놓쳤다면 자기 전에 가족에게 “오늘 고생하셨어요”라고 한마디 건네는 것부터 해 볼까요?'
+      },
+      {
+        guideline: '좋아하는 노래 들으며 10분간 자유롭게 리듬 타기·율동 만들기',
+        method: '영상을 계속 넘겨 보는 대신, 오디오로 좋아하는 음악 2~3곡을 틀어 놓고 가사를 따라 부르거나 나만의 동작을 만들어 움직입니다.',
+        duration: '약 10~15분',
+        materials: '음악 재생 기기(화면은 끄고 소리만 듣기)',
+        indoorAlt: '조용한 시간에는 손뼉 박자 치기 또는 허밍으로 멜로디 따라 부르기',
+        reason: '화면을 눈으로 쫓지 않고 소리와 움직임에 집중하면 눈의 피로를 덜고 기분을 밝게 만드는 데 도움이 됩니다.',
+        successFeedback: '신나는 시간이었죠! 화면 없이도 멋진 리듬감을 뽐냈네요!',
+        hardFeedback: '쑥스러웠다면 좋아하는 노래 한 곡을 눈을 감고 끝까지 감상하는 것만으로도 충분해요!'
+      },
+      {
+        guideline: '종이접기 또는 빈 상자로 나만의 연필꽂이·미니 정리함 만들기',
+        method: '집에 있는 색종이, 신문지, 우유갑, 작은 택배 상자를 활용해 책상에서 쓸 수 있는 작은 정리함이나 장식품을 만듭니다.',
+        duration: '약 25분',
+        materials: '색종이 또는 재활용 상자, 가위, 풀(테이프)',
+        indoorAlt: '만들기 재료가 없을 때는 손수건이나 양말을 깔끔하게 개는 새로운 방법 연습해 보기',
+        reason: '직접 손을 움직여 무언가를 완성하는 성취감은 짧은 영상이 주는 자극보다 오래가는 뿌듯함을 줍니다.',
+        successFeedback: '대단한 손재주예요! 세상에 하나뿐인 멋진 작품이 탄생했네요!',
+        hardFeedback: '완성하지 못했어도 괜찮아요. 내일 이어서 조금씩 완성해 보아요!'
+      },
+      {
+        guideline: '동네 공원이나 운동장에서 친구와 캐치볼·배드민턴·술래잡기 하기',
+        method: '하교 후 친구들과 약속을 정해 스마트폰 게임 대신 운동장이나 공원에서 공놀이, 배드민턴, 술래잡기 등 야외 놀이를 합니다.',
+        duration: '약 30분',
+        materials: '공 또는 배드민턴 라켓(없으면 맨몸 놀이)',
+        indoorAlt: '비가 오거나 야외 활동이 어려울 때는 실내에서 풍선 띄우기 놀이(풍선이 바닥에 닿지 않게 치기) 하기',
+        reason: '친구들과 직접 뛰어놀며 땀을 흘리면 화면 없이도 즐겁게 우정을 쌓고 활기찬 오후를 보낼 수 있습니다.',
+        successFeedback: '최고예요! 친구들과 신나게 뛰어놀며 건강한 에너지를 발산했네요!',
+        hardFeedback: '친구와 시간이 맞지 않았다면 가족과 10분간 풍선 치기 놀이로 대신 도전해 보아요!'
+      },
+      {
+        guideline: '하루 동안 스마트폰 대신 실천한 일 3가지 칭찬 스티커·표 기록하기',
+        method: '잠자기 전 종이 달력이나 플래너에 오늘 스마트폰을 멈추고 대신 실천한 행동 3가지를 적고 스스로 칭찬 표시를 합니다.',
+        duration: '약 10분',
+        materials: '종이 달력(또는 공책), 펜',
+        indoorAlt: '거창한 3가지가 떠오르지 않으면 “횡단보도에서 화면 안 보기”처럼 아주 작은 성공 1가지만 적기',
+        reason: '내가 해낸 작은 실천을 눈으로 확인하면 스스로 스마트폰 사용을 조절하는 힘을 기르는 데 도움이 됩니다.',
+        successFeedback: '멋진 기록이에요! 스스로 약속을 지키는 힘이 점점 자라고 있어요!',
+        hardFeedback: '기록을 깜빡했어도 괜찮아요. 지금 떠오르는 오늘의 작은 실천 한 가지만 적어 볼까요?'
+      },
+      {
+        guideline: '우리 반 친구나 가족에게 손글씨 감사 쪽지 한 장 쓰기',
+        method: '메신저 이모티콘 대신 작은 메모지에 고마웠던 일이나 응원하는 마음을 한두 문장으로 적어 책상 위나 식탁에 남겨 둡니다.',
+        duration: '약 10분',
+        materials: '메모지(또는 이면지), 볼펜',
+        indoorAlt: '전달할 대상이 떠오르지 않을 때는 미래의 나에게 보내는 응원 쪽지 한 장 써서 필통에 넣기',
+        reason: '정성껏 손으로 쓴 짧은 글은 디지털 메시지보다 따뜻한 마음을 전하고 관계를 돈독하게 해 줍니다.',
+        successFeedback: '정말 따뜻해요! 손글씨 쪽지가 누군가의 하루를 환하게 밝혀 줄 거예요!',
+        hardFeedback: '무슨 말을 쓸지 고민된다면 “오늘 함께해 줘서 고마워!” 한 문장부터 시작해 보아요.'
+      },
+      {
+        guideline: '물 한 잔 천천히 마시며 창밖 먼 산이나 건물 3분간 바라보기',
+        method: '스마트폰을 잠시 책상 위에 내려놓고 물 한 컵을 마신 뒤, 창가로 가서 멀리 있는 나무나 건물 끝부분을 3분 동안 천천히 바라봅니다.',
+        duration: '약 10분',
+        materials: '물 한 컵',
+        indoorAlt: '창밖이 보이지 않는 곳에서는 실내에서 가장 멀리 떨어진 벽면이나 시계를 바라보며 눈 깜빡이기',
+        reason: '가까운 스마트폰 화면만 계속 보던 시선을 멀리 옮기면 잠깐 쉬어 가는 여유를 가질 수 있습니다.',
+        successFeedback: '좋아요! 화면에서 잠시 눈을 떼고 상쾌하게 쉬는 시간을 가졌네요!',
+        hardFeedback: '3분이 길게 느껴졌다면 다음엔 물 한 모금 마시는 30초 동안만이라도 화면을 끄고 쉬어 보아요.'
+      },
+      {
+        guideline: '오늘 배운 교과서 내용 중 핵심 단어 3개 공책에 마인드맵 그리기',
+        method: '학교에서 배운 사회·과학·국어 단원 중 기억에 남는 핵심 단어를 가운데 적고, 가지치기로 관련 내용을 5분~15분간 정리합니다.',
+        duration: '약 15분',
+        materials: '공책, 색펜 또는 연필',
+        indoorAlt: '공책 정리가 어렵다면 가족에게 오늘 학교에서 배운 가장 신기한 내용 한 가지를 말로 설명해 주기',
+        reason: '스마트폰 영상을 보는 대신 배운 내용을 내 손으로 정리하면 스스로 복습하는 습관을 기를 수 있습니다.',
+        successFeedback: '훌륭해요! 나만의 마인드맵으로 오늘 배운 내용을 머릿속에 쏙 정리했네요!',
+        hardFeedback: '마인드맵이 막막하다면 교과서 목차나 제목 한 줄만 공책에 옮겨 적는 것부터 시작해 봐요.'
+      },
+      {
+        guideline: '반려식물 또는 화분 물 주고 잎사귀 변화 관찰하기',
+        method: '집이나 교실에 있는 화분의 흙이 말랐는지 손가락으로 확인해 물을 주고, 새잎이 돋았는지 자세히 살펴봅니다.',
+        duration: '약 10분',
+        materials: '물뿌리개(또는 컵)',
+        indoorAlt: '화분이 없을 때는 물병에 양파나 고구마, 콩나물을 키워 보며 매일 자라는 모습 관찰하기',
+        reason: '식물을 돌보며 작은 변화를 살피면 화면 속 자극 대신 차분하게 집중하는 즐거움을 느낄 수 있습니다.',
+        successFeedback: '다정해요! 식물을 정성껏 돌보며 작은 자연의 변화를 발견했네요!',
+        hardFeedback: '오늘 잊어버렸다면 내일 아침 세수한 직후에 화분 한 번 들여다보는 습관을 만들어 볼까요?'
+      },
+      {
+        guideline: '신문이나 잡지·광고지에서 재미있는 낱말 오려 문장 만들기',
+        method: '다 읽은 신문, 전단지, 안내문에서 마음에 드는 글자를 오려 종이에 붙이면서 재미있는 응원 문장이나 삼행시를 만듭니다.',
+        duration: '약 20분',
+        materials: '폐신문 또는 전단지, 가위, 풀, 이면지',
+        indoorAlt: '가위나 풀이 없을 때는 내 이름 세 글자로 나를 칭찬하는 삼행시를 공책에 써 보기',
+        reason: '손으로 자르고 붙이며 글자를 조합하는 놀이는 스마트폰 없이도 창의적으로 시간을 보내게 해 줍니다.',
+        successFeedback: '재치 만점이에요! 세상에 하나뿐인 재미있는 문장이 완성되었네요!',
+        hardFeedback: '재료를 찾기 어려웠다면 공책에 우리 모둠 이름으로 삼행시를 짓는 것부터 도전해 보아요.'
+      },
+      {
+        guideline: '가족과 함께 오늘의 퀴즈 3문제 내고 맞히기',
+        method: '저녁 시간이나 이동 중에 속담, 넌센스, 상식 퀴즈를 각자 3문제씩 생각해서 가족에게 내고 서로 맞혀 봅니다.',
+        duration: '약 15분',
+        materials: '없음 (필요시 메모지)',
+        indoorAlt: '혼자 있을 때는 교과서 뒤편 용어 사전을 펼쳐 스스로 퀴즈를 내고 답 맞혀 보기',
+        reason: '서로 문제를 내고 웃으며 맞히는 과정은 스마트폰 없이도 가족과 즐거운 대화 시간을 만들어 줍니다.',
+        successFeedback: '와우! 재치 있는 퀴즈로 가족 모두 함께 웃는 즐거운 시간을 보냈네요!',
+        hardFeedback: '퀴즈가 바로 떠오르지 않으면 “내가 오늘 점심에 먹은 반찬 맞히기”처럼 가벼운 문제부터 내 보아요.'
+      },
+      {
+        guideline: '내 방 환기시키고 이불·베개 반듯하게 정리하기',
+        method: '창문을 열어 10분간 신선한 공기를 들이마시면서, 아침에 일어난 자리의 이불과 베개를 깔끔하게 개어 정돈합니다.',
+        duration: '약 10분',
+        materials: '없음',
+        indoorAlt: '이불이 이미 정리되어 있다면 옷걸이에 걸린 겉옷이나 양말 서랍 한 칸을 가지런히 정리하기',
+        reason: '잠자리를 정돈하면 방 안 분위기가 산뜻해지고, 침대에 누워 스마트폰을 보는 습관을 줄이는 데 도움이 됩니다.',
+        successFeedback: '상쾌해요! 깨끗하게 정돈된 방에서 기분 좋은 하루를 보낼 수 있겠어요!',
+        hardFeedback: '바쁜 아침에 못 했다면 하교 후 방에 들어가자마자 베개 하나만 바로 놓는 것부터 해 볼까요?'
+      },
+      {
+        guideline: '10분 동안 바른 자세로 앉아 조용히 호흡 세며 마음 가다듬기',
+        method: '스마트폰 알림을 끄고 의자에 허리를 펴고 앉아, 숨을 들이마시고 내쉬는 횟수를 속으로 1부터 20까지 천천히 세어 봅니다.',
+        duration: '약 10분',
+        materials: '의자 또는 방석',
+        indoorAlt: '가만히 앉아 있기 답답할 때는 5분 동안 조용히 눈을 감고 주변에서 들리는 소리 3가지 귀 기울여 듣기',
+        reason: '끊임없는 영상과 알림에서 잠시 벗어나 조용히 쉬면 복잡한 마음을 차분하게 정리하는 데 도움이 됩니다.',
+        successFeedback: '차분하고 멋져요! 알림 소리 없이 온전히 나만의 휴식 시간을 보냈네요!',
+        hardFeedback: '10분이 길다면 1분 동안 눈을 감고 천천히 숨 세 번 쉬는 것부터 연습해 보아요.'
+      },
+      {
+        guideline: '종이컵이나 블록·도미노로 가장 높은 탑 쌓기 도전하기',
+        method: '집에 있는 종이컵, 나무 블록, 지우개, 카드 등을 활용해 무너지지 않게 최대한 높거나 멋진 모양의 구조물을 쌓아 봅니다.',
+        duration: '약 20분',
+        materials: '종이컵, 블록, 보드게임 말 등 집에 있는 물건',
+        indoorAlt: '쌓을 물건이 없을 때는 책상 위 책들을 크기 순서대로 도미노처럼 세워 한 번에 쓰러뜨려 보기',
+        reason: '손끝 감각에 집중해 균형을 맞추는 놀이는 디지털 게임 대신 높은 집중력과 재미를 줍니다.',
+        successFeedback: '대단해요! 끝까지 집중해서 멋진 탑을 완성했군요!',
+        hardFeedback: '중간에 무너졌어도 괜찮아요! 바닥을 조금 더 넓게 만들어 다시 한 번 도전해 볼까요?'
+      },
+      {
+        guideline: '동네 도서관이나 서점에 들러 읽고 싶은 책 2권 골라 보기',
+        method: '방과 후나 주말에 스마트폰을 가방에 넣고 가까운 도서관이나 책방에 가서 제목과 표지가 끌리는 책 2권을 펼쳐 읽어 봅니다.',
+        duration: '약 30분',
+        materials: '도서관 회원증(또는 없음)',
+        indoorAlt: '외출이 어려울 때는 집 책장에 꽂혀 있지만 끝까지 읽지 않았던 책 한 권을 꺼내 목차부터 살펴보기',
+        reason: '직접 책을 고르고 책장을 넘기는 경험은 짧은 영상 대신 깊이 있는 이야기를 만나는 즐거움을 줍니다.',
+        successFeedback: '멋진 독서 탐험이었어요! 새로운 책 속에서 재미있는 이야기를 발견했나요?',
+        hardFeedback: '도서관에 갈 시간이 없었다면 집에서 만화책이나 백과사전 한 단원만 펼쳐 보는 것부터 시작해 봐요.'
+      },
+      {
+        guideline: '친구와 실뜨기, 공기놀이, 고무줄놀이 등 전래·손놀이 하기',
+        method: '쉬는 시간이나 방과 후에 스마트폰 대신 실 한 가닥이나 공기알, 지우개를 이용해 친구·가족과 손놀이를 즐깁니다.',
+        duration: '약 15분',
+        materials: '털실 한 가닥 또는 공기알(지우개 5개)',
+        indoorAlt: '혼자 있을 때는 한 손으로 지우개 던져 받기나 손가락 가위바위보 양손 다르게 내기 연습하기',
+        reason: '간단한 도구만으로 친구와 얼굴을 마주 보고 웃으며 놀 수 있어 교실과 집 어디서나 실천하기 좋습니다.',
+        successFeedback: '신났겠네요! 화면 없이도 친구와 손발을 맞추며 즐거운 시간을 보냈어요!',
+        hardFeedback: '놀이 방법을 잘 모른다면 가족이나 친구에게 옛날에 즐겨 하던 손놀이 하나를 배워 보아요!'
+      },
+      {
+        guideline: '내가 좋아하는 요리 레시피 공책에 그림과 함께 적어 보기',
+        method: '먹고 싶은 간식이나 간단한 요리(달걀프라이, 주먹밥, 샌드위치 등)의 재료와 만드는 순서를 나만의 그림 요리책처럼 적습니다.',
+        duration: '약 20분',
+        materials: '공책, 연필, 색연필',
+        indoorAlt: '요리 순서가 떠오르지 않으면 오늘 급식 메뉴 중 가장 맛있었던 반찬을 그림으로 그리고 별점 매기기',
+        reason: '먹거리와 생활 기술을 스스로 정리해 보면 실생활에 도움이 되고 스마트폰을 찾는 시간을 자연스럽게 줄일 수 있습니다.',
+        successFeedback: '맛있는 아이디어예요! 나만의 멋진 그림 요리책이 한 페이지 채워졌네요!',
+        hardFeedback: '그림 그리기 어려울 땐 좋아하는 간식 이름과 들어가는 재료 3가지만 간단히 적어 보아요.'
+      },
+      {
+        guideline: '거울 앞에서 바른 자세 확인하고 어깨·목 가볍게 풀기',
+        method: '스마트폰을 내려다보느라 앞으로 숙여졌던 고개와 어깨를 펴고, 거울을 보며 양쪽 어깨 높이를 맞춘 뒤 천천히 기지개를 켭니다.',
+        duration: '약 10분',
+        materials: '거울(또는 벽면)',
+        indoorAlt: '거울이 없을 때는 벽에 뒤통수, 어깨, 엉덩이, 뒤꿈치를 가볍게 대고 1분간 바르게 서 있기',
+        reason: '고개를 숙여 화면을 오래 보던 자세에서 벗어나 몸을 펴 주면 한결 가뿐한 기분을 느낄 수 있습니다.',
+        successFeedback: '바른 자세 최고예요! 몸을 쭉 펴니 훨씬 씩씩하고 멋져 보여요!',
+        hardFeedback: '자주 잊어버린다면 화장실에 다녀올 때마다 기지개 한 번씩 켜는 것부터 약속해 볼까요?'
+      },
+      {
+        guideline: '이번 주말에 가족과 하고 싶은 활동 3가지 계획표 만들기',
+        method: '스마트폰으로 시간을 보내는 대신 달력이나 종이에 이번 주말 가족과 함께 가고 싶은 곳이나 해 보고 싶은 놀이를 적어 제안합니다.',
+        duration: '약 15분',
+        materials: '종이, 펜',
+        indoorAlt: '주말 외출이 어렵다면 집에서 가족과 함께 영화를 보거나 보드게임 대회를 여는 집콕 계획 세우기',
+        reason: '스스로 주말 계획을 세워 가족에게 제안하면 화면 밖에서 함께 어울리는 즐거움을 기대할 수 있습니다.',
+        successFeedback: '멋진 기획자예요! 가족들과 함께할 즐거운 주말이 벌써 기대되네요!',
+        hardFeedback: '거창한 계획이 아니어도 괜찮아요. “주말에 같이 동네 한 바퀴 걷기” 한 가지만 적어 보아요.'
+      },
+      {
+        guideline: '현관 신발장 정리하고 내 운동화 끈·먼지 털어 정돈하기',
+        method: '하교 후 스마트폰을 바로 켜지 않고 현관에 벗어 둔 가족들의 신발을 가지런히 맞춘 뒤 내 운동화를 털어 제자리에 놓습니다.',
+        duration: '약 10분',
+        materials: '없음 (필요시 마른 휴지나 솔)',
+        indoorAlt: '신발장이 이미 정리되어 있다면 우산꽂이의 우산을 깔끔하게 말아 정리하기',
+        reason: '집에 들어오자마자 작은 정리 행동을 먼저 하면 습관적으로 스마트폰을 집어 드는 흐름을 바꿀 수 있습니다.',
+        successFeedback: '정말 기특해요! 현관이 깔끔해지니 온 가족이 기분 좋게 집에 들어올 수 있겠어요!',
+        hardFeedback: '가족 신발까지 다 정리하기 벅찼다면 내 신발 한 켤레만 가지런히 놓는 것부터 실천해 보아요.'
+      },
+      {
+        guideline: '좋아하는 책 속 인상 깊은 문장 한 줄 손글씨로 따라 쓰기',
+        method: '동화책, 위인전, 시집 등에서 마음이 따뜻해지거나 용기를 주는 문장 한두 줄을 골라 공책에 정성껏 또박또박 옮겨 적습니다.',
+        duration: '약 15분',
+        materials: '책 1권, 공책, 좋아하는 펜',
+        indoorAlt: '책을 찾기 어려울 때는 내가 좋아하는 노래 가사 중 가장 힘이 되는 한 소절을 예쁜 글씨로 적어 보기',
+        reason: '좋은 문장을 천천히 손으로 따라 쓰면 마음을 차분하게 가라앉히고 어휘력을 넓히는 데 도움이 됩니다.',
+        successFeedback: '멋진 손글씨예요! 마음이 따뜻해지는 나만의 보물 문장이 생겼네요!',
+        hardFeedback: '긴 문장이 부담스럽다면 단 네 글자짜리 사자성어나 응원 단어 하나만 예쁘게 써 보아요.'
+      }
+    ];
+
+    function generateId() {
+      return 'id_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7);
+    }
+
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function normalizeActivityCard(raw) {
+      const c = raw && typeof raw === 'object' ? raw : {};
+      const validSources = ['student', 'ai'];
+      const validStatuses = ['pending', 'accepted', 'edited_accepted', 'excluded'];
+
+      return {
+        id: typeof c.id === 'string' && c.id ? c.id : generateId(),
+        guideline: typeof c.guideline === 'string' ? c.guideline : '',
+        method: typeof c.method === 'string' ? c.method : '',
+        duration: typeof c.duration === 'string' ? c.duration : '',
+        materials: typeof c.materials === 'string' ? c.materials : '',
+        indoorAlt: typeof c.indoorAlt === 'string' ? c.indoorAlt : '',
+        reason: typeof c.reason === 'string' ? c.reason : '',
+        successFeedback: typeof c.successFeedback === 'string' ? c.successFeedback : '',
+        hardFeedback: typeof c.hardFeedback === 'string' ? c.hardFeedback : '',
+        source: validSources.includes(c.source) ? c.source : 'student',
+        reviewStatus: validStatuses.includes(c.reviewStatus) ? c.reviewStatus : 'accepted'
+      };
+    }
+
+    function getSourceLabel(source) {
+      return source === 'ai' ? 'AI 제안' : '학생 작성';
+    }
+
+    function getStatusLabel(status) {
+      const map = {
+        pending: '검토 대기',
+        accepted: '채택',
+        edited_accepted: '수정 후 채택',
+        excluded: '제외'
+      };
+      return map[status] || '채택';
+    }
+
+    function getConfirmedCards() {
+      const confirmed = appState.ruleCards.filter(
+        (c) => c.reviewStatus === 'accepted' || c.reviewStatus === 'edited_accepted'
+      );
+      const studentCards = confirmed.filter((c) => c.source === 'student');
+      const aiCards = confirmed.filter((c) => c.source === 'ai');
+      return [...studentCards, ...aiCards];
+    }
+
+    function getPendingCards() {
+      return appState.ruleCards.filter((c) => c.reviewStatus === 'pending');
+    }
+
+    function getExcludedCards() {
+      return appState.ruleCards.filter((c) => c.reviewStatus === 'excluded');
+    }
+
+    function syncScheduleWithAccepted(forceStudentFirstReset = false) {
+      const confirmed = getConfirmedCards();
+      const confirmedIds = new Set(confirmed.map((c) => c.id));
+
+      if (!Array.isArray(appState.scheduledCardIds)) {
+        appState.scheduledCardIds = [];
+      }
+
+      let validScheduled = appState.scheduledCardIds.filter((id) => confirmedIds.has(id));
+      validScheduled = [...new Set(validScheduled)];
+
+      if (forceStudentFirstReset) {
+        validScheduled = confirmed.slice(0, TARGET_DAYS).map((c) => c.id);
+      } else {
+        const unscheduled = confirmed.filter((c) => !validScheduled.includes(c.id));
+        const unscheduledStudent = unscheduled.filter((c) => c.source === 'student');
+        const unscheduledAi = unscheduled.filter((c) => c.source !== 'student');
+
+        for (const sc of unscheduledStudent) {
+          if (validScheduled.length < TARGET_DAYS) {
+            let lastStudentIdx = -1;
+            validScheduled.forEach((id, idx) => {
+              const card = confirmed.find((c) => c.id === id);
+              if (card && card.source === 'student') lastStudentIdx = idx;
+            });
+            validScheduled.splice(lastStudentIdx + 1, 0, sc.id);
+          }
+        }
+
+        for (const ac of unscheduledAi) {
+          if (validScheduled.length < TARGET_DAYS) {
+            validScheduled.push(ac.id);
+          }
+        }
+      }
+
+      appState.scheduledCardIds = validScheduled.slice(0, TARGET_DAYS);
+    }
+
+    function detectDuplicatePairs() {
+      const activeCards = appState.ruleCards.filter((c) => c.reviewStatus !== 'excluded');
+      const tokenize = (text) => {
+        const stopWords = ['하기', '보기', '하기위해', '스마트폰', '대신', '시간', '활동', '오늘', '우리', '친구', '가족', '함께', '혼자', '방법'];
+        return String(text || '')
+          .replace(/[^가-힣a-zA-Z0-9\s]/g, ' ')
+          .split(/\s+/)
+          .map((w) => w.trim())
+          .filter((w) => w.length >= 2 && !stopWords.includes(w));
+      };
+
+      const duplicateCardIds = new Set();
+      const pairDescriptions = [];
+
+      for (let i = 0; i < activeCards.length; i++) {
+        for (let j = i + 1; j < activeCards.length; j++) {
+          const a = activeCards[i];
+          const b = activeCards[j];
+          const tokensA = new Set(tokenize(a.guideline));
+          const tokensB = new Set(tokenize(b.guideline));
+          if (tokensA.size === 0 || tokensB.size === 0) continue;
+
+          const common = [...tokensA].filter((t) => tokensB.has(t));
+          const minLen = Math.min(tokensA.size, tokensB.size);
+          const normTitleA = a.guideline.replace(/\s+/g, '');
+          const normTitleB = b.guideline.replace(/\s+/g, '');
+
+          const isSimilar =
+            (normTitleA && normTitleA === normTitleB) ||
+            common.length >= 2 ||
+            (minLen > 0 && common.length / minLen >= 0.6);
+
+          if (isSimilar) {
+            duplicateCardIds.add(a.id);
+            duplicateCardIds.add(b.id);
+            pairDescriptions.push(
+              `「${a.guideline}」(${getSourceLabel(a.source)}) ↔ 「${b.guideline}」(${getSourceLabel(b.source)})`
+            );
+          }
+        }
+      }
+
+      return {
+        duplicateCardIds,
+        pairDescriptions: pairDescriptions.slice(0, 5)
+      };
+    }
+
+    function createDefaultState() {
+      return {
+        currentStep: 1,
+        step1: {
+          groupName: '',
+          problem: '',
+          targetUser: '',
+          evidence: '',
+          coreGuideline: '',
+          guidelineReason: ''
+        },
+        ruleCards: [],
+        scheduledCardIds: [],
+        promptText: '',
+        promptManuallyEdited: false,
+        promptOutOfSync: false,
+        hahRecords: [
+          {
+            id: generateId(),
+            intent: '',
+            aiResult: '',
+            decision: '수정하기',
+            reason: '',
+            recheckResult: ''
+          }
+        ]
+      };
+    }
+
+    function setStorageErrorState(isFailed) {
+      storageFailed = Boolean(isFailed);
+      const statusEl = document.getElementById('saveStatusText');
+      const bannerEl = document.getElementById('storageErrorBanner');
+
+      if (statusEl) {
+        if (storageFailed) {
+          statusEl.className = 'text-xs text-rose-700 font-extrabold flex items-center gap-1.5 shrink-0';
+          statusEl.innerHTML = `
+            <span class="w-2 h-2 rounded-full bg-rose-600 inline-block"></span>
+            <span>자동 저장 실패 (파일로 저장 필요)</span>
+          `;
+        } else {
+          statusEl.className = 'text-xs text-teal-800 font-semibold flex items-center gap-1.5 shrink-0';
+          statusEl.innerHTML = `
+            <span class="w-2 h-2 rounded-full bg-teal-600 inline-block"></span>
+            <span>이 기기 브라우저에 자동 저장됨</span>
+          `;
+        }
+      }
+
+      if (bannerEl) {
+        bannerEl.classList.toggle('hidden', !storageFailed);
+      }
+    }
+
+    function loadState() {
+      const defaults = createDefaultState();
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return defaults;
+
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== 'object') return defaults;
+
+        const normalizedCards = Array.isArray(parsed.ruleCards)
+          ? parsed.ruleCards.map((c) => normalizeActivityCard(c))
+          : [];
+
+        return {
+          currentStep:
+            Number.isInteger(parsed.currentStep) && parsed.currentStep >= 1 && parsed.currentStep <= 4
+              ? parsed.currentStep
+              : 1,
+          step1: {
+            ...defaults.step1,
+            ...(parsed.step1 && typeof parsed.step1 === 'object' ? parsed.step1 : {})
+          },
+          ruleCards: normalizedCards,
+          scheduledCardIds: Array.isArray(parsed.scheduledCardIds)
+            ? parsed.scheduledCardIds.filter((id) => typeof id === 'string')
+            : [],
+          promptText: typeof parsed.promptText === 'string' ? parsed.promptText : '',
+          promptManuallyEdited: Boolean(parsed.promptManuallyEdited),
+          promptOutOfSync: Boolean(parsed.promptOutOfSync),
+          hahRecords:
+            Array.isArray(parsed.hahRecords) && parsed.hahRecords.length > 0
+              ? parsed.hahRecords
+              : defaults.hahRecords
+        };
+      } catch (e) {
+        console.error('localStorage 불러오기 오류:', e);
+        storageFailed = true;
+        return defaults;
+      }
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+        setStorageErrorState(false);
+      } catch (e) {
+        console.error('localStorage 저장 오류:', e);
+        setStorageErrorState(true);
+      }
+    }
+
+    let appState = loadState();
+    syncScheduleWithAccepted(false);
+
+    function markPromptOutOfSyncIfNeeded() {
+      if (appState.promptManuallyEdited) {
+        appState.promptOutOfSync = true;
+        updatePromptSyncUI();
+      }
+    }
+
+    function updatePromptSyncUI() {
+      const tabBadge = document.getElementById('tab3OutOfSyncBadge');
+      const syncBanner = document.getElementById('promptOutOfSyncBanner');
+      const editedBadge = document.getElementById('promptEditedBadge');
+
+      if (tabBadge) tabBadge.classList.toggle('hidden', !appState.promptOutOfSync);
+      if (syncBanner) syncBanner.classList.toggle('hidden', !appState.promptOutOfSync);
+      if (editedBadge) editedBadge.classList.toggle('hidden', !appState.promptManuallyEdited);
+    }
+
+    function switchStep(stepNum) {
+      const targetStep = [1, 2, 3, 4].includes(stepNum) ? stepNum : 1;
+      appState.currentStep = targetStep;
+
+      for (let i = 1; i <= 4; i++) {
+        const panel = document.getElementById(`step-panel-${i}`);
+        const btn = document.getElementById(`tab-btn-${i}`);
+        const isCurrent = i === targetStep;
+
+        if (panel) panel.classList.toggle('hidden', !isCurrent);
+
+        if (btn) {
+          if (isCurrent) {
+            btn.classList.add('step-tab-active');
+            btn.classList.remove('step-tab-inactive');
+          } else {
+            btn.classList.remove('step-tab-active');
+            btn.classList.add('step-tab-inactive');
+          }
+
+          const numBadge = btn.querySelector('span');
+          if (numBadge) {
+            if (isCurrent) {
+              numBadge.classList.add('bg-teal-800/20');
+              numBadge.classList.remove('bg-slate-100', 'text-slate-700');
+            } else {
+              numBadge.classList.remove('bg-teal-800/20');
+              numBadge.classList.add('bg-slate-100', 'text-slate-700');
+            }
+          }
+        }
+      }
+
+      if (targetStep === 2) {
+        refreshStep2All();
+      } else if (targetStep === 3) {
+        if (!appState.promptManuallyEdited) {
+          rebuildPromptFromInputs(false);
+        } else {
+          const textarea = document.getElementById('finalPromptTextarea');
+          if (textarea) {
+            textarea.value = appState.promptText || buildStructuredPrompt();
+          }
+          updatePromptSyncUI();
+        }
+      } else if (targetStep === 4) {
+        renderHahRecords();
+      }
+
+      saveState();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    const STEP1_FIELDS = ['groupName', 'problem', 'targetUser', 'evidence', 'coreGuideline', 'guidelineReason'];
+
+    function restoreStep1Inputs() {
+      STEP1_FIELDS.forEach((field) => {
+        const el = document.getElementById(field);
+        if (el) el.value = appState.step1[field] || '';
+      });
+    }
+
+    function bindStep1Events() {
+      STEP1_FIELDS.forEach((field) => {
+        const el = document.getElementById(field);
+        if (!el) return;
+        el.oninput = (e) => {
+          appState.step1[field] = e.target.value;
+          markPromptOutOfSyncIfNeeded();
+          saveState();
+        };
+      });
+    }
+
+    function refreshStep2All() {
+      syncScheduleWithAccepted(false);
+      renderActivityStatsAndDuplicates();
+      renderPendingReviewCards();
+      renderRuleCards();
+      renderExcludedCards();
+      renderThirtyDaySchedule();
+      renderFlowDiagram();
+      updatePreviewSelector();
+    }
+
+    function renderActivityStatsAndDuplicates() {
+      const studentConfirmed = appState.ruleCards.filter(
+        (c) => c.source === 'student' && (c.reviewStatus === 'accepted' || c.reviewStatus === 'edited_accepted')
+      ).length;
+      const aiAccepted = appState.ruleCards.filter(
+        (c) => c.source === 'ai' && (c.reviewStatus === 'accepted' || c.reviewStatus === 'edited_accepted')
+      ).length;
+      const aiPending = getPendingCards().length;
+      const totalConfirmed = studentConfirmed + aiAccepted;
+      const shortage = Math.max(0, TARGET_DAYS - totalConfirmed);
+
+      const statsBar = document.getElementById('activityStatsBar');
+      if (statsBar) {
+        statsBar.innerHTML = `
+          <div class="bg-teal-50 border border-teal-200 rounded-2xl p-3.5">
+            <div class="text-xs font-bold text-teal-800">① 학생 직접 작성 (우선 포함)</div>
+            <div class="text-2xl font-extrabold text-teal-950 mt-1">${studentConfirmed}개</div>
+            <div class="text-[11px] text-teal-700 mt-0.5">학생이 직접 만든 핵심 활동</div>
+          </div>
+
+          <div class="bg-indigo-50 border border-indigo-200 rounded-2xl p-3.5">
+            <div class="text-xs font-bold text-indigo-800">② AI 제안 활동</div>
+            <div class="text-2xl font-extrabold text-indigo-950 mt-1">채택 ${aiAccepted}개 <span class="text-sm font-bold text-indigo-700">/ 대기 ${aiPending}개</span></div>
+            <div class="text-[11px] text-indigo-700 mt-0.5">검토 대기 항목은 학생 검토 후 확정</div>
+          </div>
+
+          <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-3.5">
+            <div class="text-xs font-bold text-emerald-800">③ 최종 확정 활동 수</div>
+            <div class="text-2xl font-extrabold text-emerald-950 mt-1">${totalConfirmed}개 <span class="text-sm font-bold text-emerald-700">/ 목표 ${TARGET_DAYS}개</span></div>
+            <div class="text-[11px] text-emerald-700 mt-0.5">1~30일 배치: ${appState.scheduledCardIds.length}일 채워짐</div>
+          </div>
+
+          <div class="${shortage > 0 ? 'bg-amber-50 border-amber-300' : 'bg-slate-50 border-slate-200'} border rounded-2xl p-3.5">
+            <div class="text-xs font-bold ${shortage > 0 ? 'text-amber-900' : 'text-slate-700'}">④ 30일 달성까지 남은 수</div>
+            <div class="text-2xl font-extrabold ${shortage > 0 ? 'text-amber-950' : 'text-slate-900'} mt-1">
+              ${shortage > 0 ? `${shortage}개 부족` : totalConfirmed > TARGET_DAYS ? `${totalConfirmed - TARGET_DAYS}개 초과` : '30개 달성 완료!'}
+            </div>
+            <div class="text-[11px] ${shortage > 0 ? 'text-amber-800' : 'text-slate-600'} mt-0.5">
+              ${shortage > 0 ? '직접 추가하거나 AI 추천을 받아 보세요' : totalConfirmed > TARGET_DAYS ? '아래 배치표에서 사용할 30개를 선택하세요' : '1일차~30일차 일정이 모두 채워졌어요'}
+            </div>
+          </div>
+        `;
+      }
+
+      const { pairDescriptions } = detectDuplicatePairs();
+      const dupBanner = document.getElementById('duplicateWarningBanner');
+      if (dupBanner) {
+        if (pairDescriptions.length > 0) {
+          dupBanner.classList.remove('hidden');
+          dupBanner.innerHTML = `
+            <div class="font-extrabold flex items-center gap-1.5 text-amber-950">
+              <span>⚠️ 의미가 비슷한 활동의 중복 여부를 검토해 보세요 (${pairDescriptions.length}쌍 발견)</span>
+            </div>
+            <p class="text-xs sm:text-sm text-amber-900 mt-1">
+              아래 활동들은 제목이나 핵심 행동이 비슷합니다. 같은 날이나 다른 날에 겹치는 활동이 들어가지 않도록 <strong>수정</strong>하거나 하나를 <strong>제외</strong>해 보세요.
+            </p>
+            <ul class="mt-2 space-y-1 text-xs text-amber-950 bg-white/80 rounded-xl p-2.5 border border-amber-200">
+              ${pairDescriptions.map((desc) => `<li>• ${escapeHtml(desc)}</li>`).join('')}
+            </ul>
+          `;
+        } else {
+          dupBanner.classList.add('hidden');
+        }
+      }
+    }
+
+    function renderPendingReviewCards() {
+      const pending = getPendingCards();
+      const badge = document.getElementById('pendingCountBadge');
+      const container = document.getElementById('pendingCardsContainer');
+      const { duplicateCardIds } = detectDuplicatePairs();
+
+      if (badge) badge.textContent = `검토 대기: ${pending.length}개`;
+      if (!container) return;
+
+      if (pending.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-full bg-white/80 border border-dashed border-indigo-300 rounded-2xl p-6 text-center">
+            <p class="text-indigo-950 font-bold text-sm sm:text-base">현재 검토 대기 중인 AI 제안 활동이 없습니다.</p>
+            <p class="text-indigo-700 text-xs sm:text-sm mt-1">
+              30개보다 활동이 부족하다면 위쪽의 <strong>[부족한 활동 AI 추천받기]</strong> 버튼을 눌러 제안을 받아 보세요.
+            </p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = pending
+        .map((card, index) => {
+          const isDup = duplicateCardIds.has(card.id);
+          return `
+            <article class="bg-white rounded-2xl border-2 ${isDup ? 'border-amber-400' : 'border-indigo-200'} p-4 sm:p-5 flex flex-col justify-between shadow-2xs">
+              <div>
+                <div class="flex flex-wrap items-center justify-between gap-1.5 mb-2">
+                  <div class="flex flex-wrap items-center gap-1.5">
+                    <span class="px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-900 font-extrabold text-xs">작성 출처: AI 제안</span>
+                    <span class="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 font-extrabold text-xs">상태: 검토 대기 (#${index + 1})</span>
+                    ${isDup ? '<span class="px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 font-extrabold text-xs">중복 의심</span>' : ''}
+                  </div>
+                  <span class="text-xs font-bold text-slate-500">⏱ ${escapeHtml(card.duration || '시간 미입력')}</span>
+                </div>
+
+                <h4 class="text-base sm:text-lg font-extrabold text-slate-900 leading-snug">${escapeHtml(card.guideline)}</h4>
+
+                <div class="mt-2.5 space-y-1.5 text-xs sm:text-sm text-slate-700 bg-slate-50 rounded-xl p-3 border border-slate-200">
+                  <div><strong>• 실천 방법:</strong> ${escapeHtml(card.method)}</div>
+                  <div><strong>• 준비물:</strong> ${escapeHtml(card.materials)}</div>
+                  <div><strong>• 실내 대안/다른 방법:</strong> ${escapeHtml(card.indoorAlt)}</div>
+                  <div><strong>• 추천 이유:</strong> ${escapeHtml(card.reason)}</div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2.5 text-xs">
+                  <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-2">
+                    <div class="font-extrabold text-emerald-900">🙆 실천 시 피드백</div>
+                    <p class="text-emerald-950 mt-0.5">${escapeHtml(card.successFeedback)}</p>
+                  </div>
+                  <div class="bg-amber-50 border border-amber-200 rounded-xl p-2">
+                    <div class="font-extrabold text-amber-900">🤔 어려울 때 피드백</div>
+                    <p class="text-amber-950 mt-0.5">${escapeHtml(card.hardFeedback)}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onclick="acceptPendingCard('${card.id}')"
+                  class="btn-touch rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs sm:text-sm px-2 py-2 transition"
+                >
+                  ✅ 채택
+                </button>
+                <button
+                  type="button"
+                  onclick="openRuleFormModal('${card.id}', 'edit_and_accept')"
+                  class="btn-touch rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs sm:text-sm px-2 py-2 transition"
+                >
+                  ✏️ 수정 후 채택
+                </button>
+                <button
+                  type="button"
+                  onclick="excludeActivityCard('${card.id}')"
+                  class="btn-touch rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-extrabold text-xs sm:text-sm px-2 py-2 transition"
+                >
+                  ✕ 제외
+                </button>
+              </div>
+            </article>
+          `;
+        })
+        .join('');
+    }
+
+    function acceptPendingCard(cardId) {
+      const card = appState.ruleCards.find((c) => c.id === cardId);
+      if (!card) return;
+      card.reviewStatus = 'accepted';
+      markPromptOutOfSyncIfNeeded();
+      saveState();
+      refreshStep2All();
+      showWorkFileToast(`'${card.guideline}' 활동을 채택했습니다.`);
+    }
+
+    function excludeActivityCard(cardId) {
+      const card = appState.ruleCards.find((c) => c.id === cardId);
+      if (!card) return;
+      card.reviewStatus = 'excluded';
+      markPromptOutOfSyncIfNeeded();
+      saveState();
+      refreshStep2All();
+      showWorkFileToast(`'${card.guideline}' 활동을 제외했습니다. 부족한 수만큼 다시 추천받을 수 있어요.`);
+    }
+
+    function restoreExcludedCard(cardId) {
+      const card = appState.ruleCards.find((c) => c.id === cardId);
+      if (!card) return;
+      card.reviewStatus = 'accepted';
+      markPromptOutOfSyncIfNeeded();
+      saveState();
+      refreshStep2All();
+      showWorkFileToast(`'${card.guideline}' 활동을 다시 채택했습니다.`);
+    }
+
+    function toggleExcludedDrawer() {
+      showExcludedDrawer = !showExcludedDrawer;
+      const drawer = document.getElementById('excludedCardsDrawer');
+      if (drawer) drawer.classList.toggle('hidden', !showExcludedDrawer);
+    }
+
+    function renderExcludedCards() {
+      const excluded = getExcludedCards();
+      const btn = document.getElementById('toggleExcludedBtn');
+      const container = document.getElementById('excludedCardsContainer');
+
+      if (btn) btn.textContent = `제외된 활동 보기 (${excluded.length})`;
+      if (!container) return;
+
+      if (excluded.length === 0) {
+        container.innerHTML = `<p class="col-span-full text-xs text-slate-500 py-2">제외 처리된 활동이 없습니다.</p>`;
+        return;
+      }
+
+      container.innerHTML = excluded
+        .map(
+          (card) => `
+          <div class="bg-white rounded-xl border border-slate-200 p-3 flex items-center justify-between gap-2">
+            <div class="min-w-0">
+              <div class="flex items-center gap-1.5 text-[11px] font-bold text-slate-500">
+                <span>${getSourceLabel(card.source)}</span>
+                <span>•</span>
+                <span class="text-rose-600">제외됨</span>
+              </div>
+              <div class="font-extrabold text-sm text-slate-800 truncate">${escapeHtml(card.guideline)}</div>
+            </div>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onclick="restoreExcludedCard('${card.id}')"
+                class="px-2.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold text-xs"
+              >
+                다시 채택
+              </button>
+              <button
+                type="button"
+                onclick="requestDeleteRuleCard('${card.id}')"
+                class="px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs"
+              >
+                완전 삭제
+              </button>
+            </div>
+          </div>
+        `
+        )
+        .join('');
+    }
+
+    function renderRuleCards() {
+      const container = document.getElementById('ruleCardsContainer');
+      const confirmed = getConfirmedCards();
+      const { duplicateCardIds } = detectDuplicatePairs();
+
+      if (confirmed.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-full bg-slate-50 border-2 border-dashed border-slate-300 rounded-2xl p-8 text-center">
+            <p class="text-slate-700 font-extrabold text-lg">아직 확정된 대체 활동이 없어요.</p>
+            <p class="text-slate-500 text-sm sm:text-base mt-1">
+              <strong>[+ 학생 활동 직접 추가]</strong> 버튼으로 우리 모둠의 활동을 먼저 만들고, 부족한 개수는 <strong>[부족한 활동 AI 추천받기]</strong>로 채워 보세요!
+            </p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = confirmed
+        .map((card, index) => {
+          const isStudent = card.source === 'student';
+          const isDup = duplicateCardIds.has(card.id);
+          const dayIdx = appState.scheduledCardIds.indexOf(card.id);
+          const dayBadge =
+            dayIdx !== -1
+              ? `<span class="px-2.5 py-0.5 rounded-full bg-teal-600 text-white font-extrabold text-xs">${dayIdx + 1}일차 배치됨</span>`
+              : `<span class="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 font-extrabold text-xs">30일 초과 미배치</span>`;
+
+          return `
+            <article class="bg-slate-50 rounded-2xl border ${isDup ? 'border-amber-400 ring-2 ring-amber-200' : 'border-slate-200'} p-4 sm:p-5 flex flex-col justify-between shadow-2xs">
+              <div>
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-2.5">
+                  <div class="flex flex-wrap items-center gap-1.5">
+                    ${dayBadge}
+                    <span class="px-2.5 py-0.5 rounded-full ${isStudent ? 'bg-emerald-100 text-emerald-900' : 'bg-indigo-100 text-indigo-900'} font-extrabold text-xs">
+                      ${getSourceLabel(card.source)}
+                    </span>
+                    <span class="px-2 py-0.5 rounded-full bg-white border border-slate-200 text-slate-700 font-bold text-xs">
+                      ${getStatusLabel(card.reviewStatus)}
+                    </span>
+                    ${isDup ? '<span class="px-2 py-0.5 rounded-full bg-amber-200 text-amber-950 font-extrabold text-xs">유사 중복 주의</span>' : ''}
+                  </div>
+                  <div class="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onclick="openRuleFormModal('${card.id}', 'edit')"
+                      class="px-3 py-1.5 rounded-lg bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 font-bold text-xs"
+                    >
+                      수정
+                    </button>
+                    <button
+                      type="button"
+                      onclick="excludeActivityCard('${card.id}')"
+                      class="px-3 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 font-bold text-xs"
+                    >
+                      제외
+                    </button>
+                    <button
+                      type="button"
+                      onclick="requestDeleteRuleCard('${card.id}')"
+                      class="px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 font-bold text-xs"
+                    >
+                      삭제
+                    </button>
+                  </div>
+                </div>
+
+                <div class="flex items-baseline justify-between gap-2">
+                  <h4 class="text-base sm:text-lg font-extrabold text-slate-900 leading-snug">
+                    ${index + 1}. ${escapeHtml(card.guideline)}
+                  </h4>
+                  <span class="text-xs font-bold text-teal-800 shrink-0">⏱ ${escapeHtml(card.duration || '시간 미입력')}</span>
+                </div>
+
+                <div class="text-xs sm:text-sm text-slate-700 mt-2 bg-white rounded-xl p-3 border border-slate-200 space-y-1">
+                  <div><strong class="text-slate-900">• 실천 방법:</strong> ${escapeHtml(card.method || '(미입력)')}</div>
+                  <div><strong class="text-slate-900">• 준비물:</strong> ${escapeHtml(card.materials || '(미입력)')}</div>
+                  <div><strong class="text-slate-900">• 실내 대안/다른 방법:</strong> ${escapeHtml(card.indoorAlt || '(미입력)')}</div>
+                  <div><strong class="text-slate-900">• 추천 이유:</strong> ${escapeHtml(card.reason)}</div>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-3 pt-3 border-t border-slate-200">
+                <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-2.5">
+                  <div class="text-xs font-extrabold text-emerald-900 mb-0.5">🙆 실천했을 때 피드백</div>
+                  <p class="text-xs sm:text-sm text-emerald-950">${escapeHtml(card.successFeedback)}</p>
+                </div>
+                <div class="bg-amber-50 border border-amber-200 rounded-xl p-2.5">
+                  <div class="text-xs font-extrabold text-amber-900 mb-0.5">🤔 어려웠을 때 피드백</div>
+                  <p class="text-xs sm:text-sm text-amber-950">${escapeHtml(card.hardFeedback)}</p>
+                </div>
+              </div>
+            </article>
+          `;
+        })
+        .join('');
+    }
+
+    function renderThirtyDaySchedule() {
+      const confirmed = getConfirmedCards();
+      const overPanel = document.getElementById('overThirtySelectorPanel');
+      const scheduleContainer = document.getElementById('thirtyDayScheduleContainer');
+
+      if (overPanel) {
+        if (confirmed.length > TARGET_DAYS) {
+          overPanel.classList.remove('hidden');
+          const selectedCount = appState.scheduledCardIds.length;
+          overPanel.innerHTML = `
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2.5 border-b border-amber-300">
+              <div>
+                <div class="font-extrabold text-amber-950 text-base">
+                  ⚠️ 확정 활동이 총 ${confirmed.length}개로 30개를 초과했습니다!
+                </div>
+                <p class="text-xs sm:text-sm text-amber-900 mt-0.5">
+                  자동으로 지우지 않았습니다. 아래에서 <strong>1~30일 일정에 실제로 사용할 활동 ${TARGET_DAYS}개</strong>를 직접 체크해 선택해 주세요. (학생 작성 활동은 우선 유지하는 것을 권장해요)
+                </p>
+              </div>
+              <span class="px-3 py-1.5 rounded-xl bg-white border border-amber-300 font-extrabold text-sm text-amber-950 shrink-0">
+                현재 선택됨: ${selectedCount} / ${TARGET_DAYS}개
+              </span>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 mt-3 max-h-56 overflow-y-auto pr-1">
+              ${confirmed
+                .map((c) => {
+                  const isChecked = appState.scheduledCardIds.includes(c.id);
+                  const disabled = !isChecked && selectedCount >= TARGET_DAYS;
+                  return `
+                    <label class="flex items-start gap-2 p-2.5 rounded-xl border ${isChecked ? 'bg-white border-teal-500' : 'bg-amber-100/50 border-amber-200'} cursor-pointer text-xs">
+                      <input
+                        type="checkbox"
+                        ${isChecked ? 'checked' : ''}
+                        ${disabled ? 'disabled' : ''}
+                        onchange="toggleCardInSchedule('${c.id}', this.checked)"
+                        class="mt-0.5 w-4 h-4 accent-teal-600"
+                      />
+                      <div class="min-w-0">
+                        <span class="font-bold ${c.source === 'student' ? 'text-emerald-800' : 'text-indigo-800'}">[${getSourceLabel(c.source)}]</span>
+                        <span class="font-extrabold text-slate-900 break-words">${escapeHtml(c.guideline)}</span>
+                      </div>
+                    </label>
+                  `;
+                })
+                .join('')}
+            </div>
+          `;
+        } else {
+          overPanel.classList.add('hidden');
+        }
+      }
+
+      if (!scheduleContainer) return;
+
+      const slotsHtml = [];
+      for (let day = 1; day <= TARGET_DAYS; day++) {
+        const idx = day - 1;
+        const cardId = appState.scheduledCardIds[idx];
+        const card = cardId ? confirmed.find((c) => c.id === cardId) : null;
+
+        if (card) {
+          const isStudent = card.source === 'student';
+          slotsHtml.push(`
+            <div class="bg-slate-50 rounded-2xl border border-slate-200 p-3 flex flex-col justify-between gap-2">
+              <div>
+                <div class="flex items-center justify-between gap-1 mb-1">
+                  <span class="px-2.5 py-0.5 rounded-lg bg-teal-700 text-white font-extrabold text-xs">${day}일차</span>
+                  <span class="px-2 py-0.5 rounded-full ${isStudent ? 'bg-emerald-100 text-emerald-900' : 'bg-indigo-100 text-indigo-900'} font-bold text-[11px]">
+                    ${getSourceLabel(card.source)}
+                  </span>
+                </div>
+                <div class="font-extrabold text-sm text-slate-900 leading-snug">${escapeHtml(card.guideline)}</div>
+                <div class="text-[11px] text-slate-500 mt-1">⏱ ${escapeHtml(card.duration || '-')} · 🎒 ${escapeHtml(card.materials || '-')}</div>
+              </div>
+
+              <div class="flex items-center justify-between pt-2 border-t border-slate-200/80 text-xs">
+                <div class="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onclick="moveScheduleDay(${idx}, -1)"
+                    ${idx === 0 ? 'disabled' : ''}
+                    class="px-2 py-1 rounded bg-white border border-slate-300 font-bold text-slate-700 disabled:opacity-40"
+                    title="앞 날짜로 이동"
+                  >
+                    ▲ 앞날로
+                  </button>
+                  <button
+                    type="button"
+                    onclick="moveScheduleDay(${idx}, 1)"
+                    ${idx >= appState.scheduledCardIds.length - 1 ? 'disabled' : ''}
+                    class="px-2 py-1 rounded bg-white border border-slate-300 font-bold text-slate-700 disabled:opacity-40"
+                    title="뒷 날짜로 이동"
+                  >
+                    ▼ 뒷날로
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onclick="openRuleFormModal('${card.id}', 'edit')"
+                  class="px-2 py-1 rounded text-teal-800 hover:bg-teal-50 font-bold"
+                >
+                  상세·수정
+                </button>
+              </div>
+            </div>
+          `);
+        } else {
+          slotsHtml.push(`
+            <div class="bg-slate-50/50 rounded-2xl border border-dashed border-slate-300 p-3 flex flex-col justify-between min-h-[118px]">
+              <div class="flex items-center justify-between">
+                <span class="px-2.5 py-0.5 rounded-lg bg-slate-200 text-slate-700 font-extrabold text-xs">${day}일차</span>
+                <span class="text-[11px] text-slate-400 font-semibold">빈 일정</span>
+              </div>
+              <p class="text-xs text-slate-400 my-2">활동을 추가하거나 AI 추천을 채택하면 자동으로 채워집니다.</p>
+            </div>
+          `);
+        }
+      }
+
+      scheduleContainer.innerHTML = slotsHtml.join('');
+    }
+
+    function toggleCardInSchedule(cardId, shouldInclude) {
+      if (shouldInclude) {
+        if (!appState.scheduledCardIds.includes(cardId) && appState.scheduledCardIds.length < TARGET_DAYS) {
+          appState.scheduledCardIds.push(cardId);
+        }
+      } else {
+        appState.scheduledCardIds = appState.scheduledCardIds.filter((id) => id !== cardId);
+      }
+      markPromptOutOfSyncIfNeeded();
+      saveState();
+      refreshStep2All();
+    }
+
+    function moveScheduleDay(index, direction) {
+      const targetIndex = index + direction;
+      if (targetIndex < 0 || targetIndex >= appState.scheduledCardIds.length) return;
+      const temp = appState.scheduledCardIds[index];
+      appState.scheduledCardIds[index] = appState.scheduledCardIds[targetIndex];
+      appState.scheduledCardIds[targetIndex] = temp;
+
+      markPromptOutOfSyncIfNeeded();
+      saveState();
+      renderRuleCards();
+      renderThirtyDaySchedule();
+      renderFlowDiagram();
+      updatePreviewSelector();
+    }
+
+    function openRuleFormModal(cardId = null, mode = 'student') {
+      const modal = document.getElementById('ruleFormModal');
+      const titleEl = document.getElementById('ruleModalTitle');
+      const badgeEl = document.getElementById('ruleModalSourceBadge');
+      const submitBtn = document.getElementById('ruleFormSubmitBtn');
+
+      const idInput = document.getElementById('editingRuleId');
+      const sourceInput = document.getElementById('editingRuleSource');
+      const statusInput = document.getElementById('editingRuleStatus');
+
+      const guidelineInput = document.getElementById('cardGuideline');
+      const durationInput = document.getElementById('cardDuration');
+      const methodInput = document.getElementById('cardMethod');
+      const materialsInput = document.getElementById('cardMaterials');
+      const indoorAltInput = document.getElementById('cardIndoorAlt');
+      const reasonInput = document.getElementById('cardReason');
+      const successInput = document.getElementById('cardSuccessFeedback');
+      const hardInput = document.getElementById('cardHardFeedback');
+
+      if (cardId) {
+        const card = appState.ruleCards.find((c) => c.id === cardId);
+        if (!card) return;
+
+        idInput.value = card.id;
+        sourceInput.value = card.source;
+
+        if (mode === 'edit_and_accept') {
+          titleEl.textContent = 'AI 제안 내용 다듬어 채택하기';
+          badgeEl.textContent = 'AI 제안 → 수정 후 채택';
+          badgeEl.className = 'inline-block px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-800 font-bold text-xs mb-1';
+          statusInput.value = 'edited_accepted';
+          submitBtn.textContent = '수정 완료 및 채택하기';
+        } else {
+          titleEl.textContent = '대체 활동 카드 수정하기';
+          badgeEl.textContent = card.source === 'ai' ? 'AI 제안 (수정됨)' : '학생 작성';
+          badgeEl.className =
+            card.source === 'ai'
+              ? 'inline-block px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-800 font-bold text-xs mb-1'
+              : 'inline-block px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-xs mb-1';
+          statusInput.value = card.source === 'ai' ? 'edited_accepted' : 'accepted';
+          submitBtn.textContent = '수정 내용 저장하기';
+        }
+
+        guidelineInput.value = card.guideline;
+        durationInput.value = card.duration;
+        methodInput.value = card.method;
+        materialsInput.value = card.materials;
+        indoorAltInput.value = card.indoorAlt;
+        reasonInput.value = card.reason;
+        successInput.value = card.successFeedback;
+        hardInput.value = card.hardFeedback;
+      } else {
+        titleEl.textContent = '새 학생 대체 활동 추가하기';
+        badgeEl.textContent = '학생 작성 (우선 포함)';
+        badgeEl.className = 'inline-block px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-xs mb-1';
+        idInput.value = '';
+        sourceInput.value = 'student';
+        statusInput.value = 'accepted';
+        submitBtn.textContent = '학생 활동 저장하기';
+
+        guidelineInput.value = '';
+        durationInput.value = '';
+        methodInput.value = '';
+        materialsInput.value = '';
+        indoorAltInput.value = '';
+        reasonInput.value = '';
+        successInput.value = '';
+        hardInput.value = '';
+      }
+
+      modal.classList.remove('hidden');
+      guidelineInput.focus();
+    }
+
+    function saveRuleCard(event) {
+      event.preventDefault();
+      const id = document.getElementById('editingRuleId').value;
+      const source = document.getElementById('editingRuleSource').value || 'student';
+      const reviewStatus = document.getElementById('editingRuleStatus').value || 'accepted';
+
+      const payload = {
+        guideline: document.getElementById('cardGuideline').value.trim(),
+        duration: document.getElementById('cardDuration').value.trim(),
+        method: document.getElementById('cardMethod').value.trim(),
+        materials: document.getElementById('cardMaterials').value.trim(),
+        indoorAlt: document.getElementById('cardIndoorAlt').value.trim(),
+        reason: document.getElementById('cardReason').value.trim(),
+        successFeedback: document.getElementById('cardSuccessFeedback').value.trim(),
+        hardFeedback: document.getElementById('cardHardFeedback').value.trim(),
+        source,
+        reviewStatus
+      };
+
+      if (!payload.guideline || !payload.method || !payload.reason || !payload.successFeedback || !payload.hardFeedback) {
+        return;
+      }
+
+      if (id) {
+        const idx = appState.ruleCards.findIndex((c) => c.id === id);
+        if (idx !== -1) {
+          appState.ruleCards[idx] = { id, ...payload };
+        }
+      } else {
+        appState.ruleCards.push({
+          id: generateId(),
+          ...payload
+        });
+      }
+
+      markPromptOutOfSyncIfNeeded();
+      saveState();
+      closeModal('ruleFormModal');
+      refreshStep2All();
+    }
+
+    function requestDeleteRuleCard(cardId) {
+      const btn = document.getElementById('confirmDeleteCardBtn');
+      btn.onclick = () => {
+        appState.ruleCards = appState.ruleCards.filter((c) => c.id !== cardId);
+        appState.scheduledCardIds = appState.scheduledCardIds.filter((id) => id !== cardId);
+        markPromptOutOfSyncIfNeeded();
+        saveState();
+        closeModal('deleteCardModal');
+        refreshStep2All();
+      };
+      openModal('deleteCardModal');
+    }
+
+    function getShortageCount() {
+      const confirmedCount = getConfirmedCards().length;
+      return Math.max(0, TARGET_DAYS - confirmedCount);
+    }
+
+    function buildExternalAiRecommendationPrompt(neededCount) {
+      const s1 = appState.step1;
+      const existingTitles = appState.ruleCards
+        .filter((c) => c.reviewStatus !== 'excluded')
+        .map((c, i) => `${i + 1}. ${c.guideline} (${getSourceLabel(c.source)})`)
+        .join('\n');
+
+      const excludedTitles = getExcludedCards()
+        .map((c, i) => `${i + 1}. ${c.guideline}`)
+        .join('\n');
+
+      return `초등학교 6학년 학생의 스마트폰 과의존 예방을 위한 '30일 스마트폰 대체 활동' 중 현재 부족한 ${neededCount}개의 대체 활동을 제안해 주세요.
+
+[우리 모둠 상황]
+- 해결할 문제: ${s1.problem.trim() || '스마트폰 대신 실천할 건강한 일상 활동 찾기'}
+- 주요 사용자: ${s1.targetUser.trim() || '초등학교 6학년 학생'}
+- 대표 수칙: ${s1.coreGuideline.trim() || '스마트폰 잠시 멈추고 건강한 대체 활동 실천하기'}
+
+[이미 작성되었거나 검토 중인 활동 목록 - 아래와 의미가 겹치지 않게 제안해 주세요]
+${existingTitles || '(아직 없음)'}
+
+${excludedTitles ? `[학생이 제외한 활동 목록 - 다시 제안하지 마세요]\n${excludedTitles}\n` : ''}
+[필수 조건]
+1. 정확히 ${neededCount}개의 활동을 제안하세요.
+2. 초등학교 6학년에게 적합하고, 다른 화면 기기(TV, 태블릿, PC 게임 등) 사용으로 대체하지 않는 활동이어야 합니다.
+3. 비용과 준비물 부담을 최소화하고, 혼자 하는 활동과 함께 하는 활동, 실내 활동과 야외 활동을 골고루 섞어 주세요.
+4. 모든 야외 활동에는 반드시 실내 대안 또는 다른 실천 방법을 함께 적어 주세요.
+5. 위험한 활동, 무리한 운동, 의학적·건강 효과를 단정하는 표현은 절대 넣지 마세요.
+6. 반드시 아래 JSON 배열 형식으로만 응답해 주세요(설명 문장 없이 JSON만 출력).
+
+[
+  {
+    "guideline": "활동 이름",
+    "method": "구체적인 실천 방법",
+    "duration": "예상 소요 시간 (예: 약 20분)",
+    "materials": "준비물 (예: 없음 또는 종이와 연필)",
+    "indoorAlt": "실내 대안 또는 다른 실천 방법",
+    "reason": "추천 이유 (건강 효과를 단정하지 않고 간단히 작성)",
+    "successFeedback": "실천했을 때 보여 줄 격려 피드백",
+    "hardFeedback": "실천이 어려웠을 때 보여 줄 공감·재도전 피드백"
+  }
+]`;
+    }
+
+    function openAiRecommendModal() {
+      const confirmed = getConfirmedCards();
+      const pending = getPendingCards();
+      const shortage = getShortageCount();
+      const requestCount = shortage > 0 ? shortage : 3;
+
+      const titleCountEl = document.getElementById('aiNeededCountTitle');
+      const statusBoxEl = document.getElementById('aiNeededStatusBox');
+      const promptPreviewEl = document.getElementById('aiRequestPromptPreview');
+      const pasteInputEl = document.getElementById('aiJsonPasteInput');
+      const errorMsgEl = document.getElementById('aiPasteErrorMsg');
+
+      if (titleCountEl) titleCountEl.textContent = String(shortage);
+      if (pasteInputEl) pasteInputEl.value = '';
+      if (errorMsgEl) errorMsgEl.textContent = '';
+
+      if (statusBoxEl) {
+        statusBoxEl.innerHTML = `
+          <div class="font-extrabold">현재 확정된 활동: ${confirmed.length}개 (검토 대기 ${pending.length}개 별도) → 목표 30개까지 <span class="text-indigo-700 underline">${shortage}개 부족</span></div>
+          <p class="text-xs text-indigo-900 mt-1">
+            ${shortage > 0
+              ? `부족한 ${shortage}개만큼 AI 제안을 받아 ‘검토 대기’ 목록에 넣은 뒤, 마음에 드는 활동만 골라 채택하세요.`
+              : '이미 30개 이상 확정되어 있습니다! 추가로 더 비교해 보고 싶다면 아래 프롬프트로 3개 더 제안받을 수 있습니다.'}
+          </p>
+        `;
+      }
+
+      if (promptPreviewEl) {
+        promptPreviewEl.value = buildExternalAiRecommendationPrompt(requestCount);
+      }
+
+      openModal('aiRecommendModal');
+    }
+
+    function copyAiRequestPrompt() {
+      const textarea = document.getElementById('aiRequestPromptPreview');
+      if (!textarea) return;
+      textarea.select();
+      textarea.setSelectionRange(0, textarea.value.length);
+      try {
+        document.execCommand('copy');
+        showWorkFileToast('외부 AI 요청용 프롬프트를 클립보드에 복사했습니다!');
+      } catch (e) {
+        showWorkFileToast('복사에 실패했습니다. 텍스트를 직접 선택해 복사해 주세요.', true);
+      }
+    }
+
+    function importAiJsonSuggestions() {
+      const pasteInput = document.getElementById('aiJsonPasteInput');
+      const errorMsgEl = document.getElementById('aiPasteErrorMsg');
+      if (!pasteInput || !errorMsgEl) return;
+
+      const raw = pasteInput.value.trim();
+      if (!raw) {
+        errorMsgEl.textContent = '외부 AI가 응답한 JSON 내용을 먼저 붙여넣어 주세요.';
+        return;
+      }
+
+      try {
+        const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+        const parsed = JSON.parse(cleaned);
+        const list = Array.isArray(parsed) ? parsed : Array.isArray(parsed.activities) ? parsed.activities : null;
+
+        if (!list || list.length === 0) {
+          errorMsgEl.textContent = '활동 목록 배열([ { ... } ]) 형식을 찾을 수 없습니다.';
+          return;
+        }
+
+        let addedCount = 0;
+        list.forEach((item) => {
+          if (!item || typeof item !== 'object') return;
+          const title = String(item.guideline || item.title || item.name || '').trim();
+          if (!title) return;
+
+          appState.ruleCards.push(
+            normalizeActivityCard({
+              id: generateId(),
+              guideline: title,
+              method: String(item.method || item.howTo || '').trim(),
+              duration: String(item.duration || item.time || '약 20분').trim(),
+              materials: String(item.materials || '없음').trim(),
+              indoorAlt: String(item.indoorAlt || item.alternative || '실내에서 조용히 실천할 수 있는 방법으로 바꾸어 실천하기').trim(),
+              reason: String(item.reason || '').trim(),
+              successFeedback: String(item.successFeedback || '잘했어요! 스마트폰 대신 건강한 활동을 실천했네요!').trim(),
+              hardFeedback: String(item.hardFeedback || '괜찮아요! 내일 다시 한 번 도전해 보아요.').trim(),
+              source: 'ai',
+              reviewStatus: 'pending'
+            })
+          );
+          addedCount++;
+        });
+
+        if (addedCount === 0) {
+          errorMsgEl.textContent = '유효한 활동 이름(guideline 또는 title)이 포함된 항목이 없습니다.';
+          return;
+        }
+
+        saveState();
+        closeModal('aiRecommendModal');
+        refreshStep2All();
+        showWorkFileToast(`AI 제안 ${addedCount}개가 ‘검토 대기’ 목록에 추가되었습니다. 내용을 검토해 채택·수정·제외해 주세요!`);
+      } catch (e) {
+        errorMsgEl.textContent = 'JSON 형식이 올바르지 않습니다. AI 답변의 대괄호([ ... ]) 전체를 다시 복사해 주세요.';
+      }
+    }
+
+    function loadOfflineSampleSuggestions() {
+      const shortage = getShortageCount();
+      const targetCount = shortage > 0 ? shortage : 3;
+
+      const existingNormalized = new Set(
+        appState.ruleCards.map((c) => c.guideline.replace(/\s+/g, ''))
+      );
+
+      const candidates = OFFLINE_SAMPLE_ACTIVITIES.filter(
+        (sample) => !existingNormalized.has(sample.guideline.replace(/\s+/g, ''))
+      );
+
+      if (candidates.length === 0) {
+        const errorMsgEl = document.getElementById('aiPasteErrorMsg');
+        if (errorMsgEl) {
+          errorMsgEl.textContent = '기본 활동 예시 보따리의 모든 항목을 이미 가져왔습니다. 방법 A(외부 AI 프롬프트) 또는 직접 추가를 이용해 주세요.';
+        }
+        return;
+      }
+
+      const selected = candidates.slice(0, targetCount);
+      selected.forEach((sample) => {
+        appState.ruleCards.push(
+          normalizeActivityCard({
+            ...sample,
+            id: generateId(),
+            source: 'ai',
+            reviewStatus: 'pending'
+          })
+        );
+      });
+
+      saveState();
+      closeModal('aiRecommendModal');
+      refreshStep2All();
+      showWorkFileToast(
+        `기본 활동 예시 보따리에서 ${selected.length}개를 가져와 ‘검토 대기’ 목록에 넣었습니다. 학생이 직접 채택·수정·제외를 선택해 주세요!`
+      );
+    }
+
+    function renderFlowDiagram() {
+      const container = document.getElementById('flowDiagramContainer');
+      const confirmed = getConfirmedCards();
+      const scheduledCards = appState.scheduledCardIds
+        .map((id) => confirmed.find((c) => c.id === id))
+        .filter(Boolean);
+
+      if (scheduledCards.length === 0) {
+        container.innerHTML = `
+          <p class="text-center text-slate-500 text-sm py-4">
+            활동을 추가하거나 채택하면 이곳에 [날짜 선택(1~30일) → 활동 안내 및 실내 대안 확인 → 실천 여부 선택 → 결과별 피드백] 작동 흐름이 자동으로 그려집니다.
+          </p>
+        `;
+        return;
+      }
+
+      const previewSlice = scheduledCards.slice(0, 5);
+      const remainCount = scheduledCards.length - previewSlice.length;
+
+      container.innerHTML = `
+        <div class="space-y-4 min-w-[300px]">
+          ${previewSlice
+            .map(
+              (card, idx) => `
+              <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-2xs">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-xs font-extrabold text-indigo-700">${idx + 1}일차 작동 흐름</span>
+                  <span class="text-[11px] font-bold px-2 py-0.5 rounded-full ${card.source === 'student' ? 'bg-emerald-100 text-emerald-800' : 'bg-indigo-100 text-indigo-800'}">
+                    ${getSourceLabel(card.source)}
+                  </span>
+                </div>
+                <div class="flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
+                  <div class="flex-1 bg-teal-50 border-2 border-teal-500 rounded-xl p-3">
+                    <div class="text-xs font-bold text-teal-800">① ${idx + 1}일차 활동 및 실내 대안 안내</div>
+                    <div class="font-extrabold text-slate-900 text-sm mt-1">${escapeHtml(card.guideline)}</div>
+                    <div class="text-xs text-slate-600 mt-0.5">⏱ ${escapeHtml(card.duration || '-')} · 실내 대안: ${escapeHtml(card.indoorAlt || '-')}</div>
+                  </div>
+
+                  <div class="flex items-center justify-center text-slate-400 font-extrabold text-lg">
+                    <span class="hidden lg:inline">➔</span>
+                    <span class="lg:hidden">⬇</span>
+                  </div>
+
+                  <div class="lg:w-44 bg-indigo-50 border-2 border-indigo-400 rounded-xl p-3 text-center flex flex-col justify-center">
+                    <div class="text-xs font-bold text-indigo-800">② 실천 여부 선택</div>
+                    <div class="font-extrabold text-indigo-950 text-sm mt-1">사용자가 버튼 클릭</div>
+                  </div>
+
+                  <div class="flex items-center justify-center text-slate-400 font-extrabold text-lg">
+                    <span class="hidden lg:inline">➔</span>
+                    <span class="lg:hidden">⬇</span>
+                  </div>
+
+                  <div class="flex-1 space-y-2">
+                    <div class="bg-emerald-50 border border-emerald-300 rounded-xl p-2.5">
+                      <span class="inline-block text-xs font-extrabold text-emerald-800 bg-emerald-200/70 px-2 py-0.5 rounded-md mb-1">
+                        [실천했어요!] 선택 시
+                      </span>
+                      <p class="text-xs sm:text-sm text-slate-800 font-medium">${escapeHtml(card.successFeedback)}</p>
+                    </div>
+                    <div class="bg-amber-50 border border-amber-300 rounded-xl p-2.5">
+                      <span class="inline-block text-xs font-extrabold text-amber-900 bg-amber-200/70 px-2 py-0.5 rounded-md mb-1">
+                        [실천이 어려웠어요] 선택 시
+                      </span>
+                      <p class="text-xs sm:text-sm text-slate-800 font-medium">${escapeHtml(card.hardFeedback)}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            `
+            )
+            .join('')}
+          ${
+            remainCount > 0
+              ? `<div class="text-center text-xs sm:text-sm font-bold text-slate-600 bg-white rounded-xl py-2.5 border border-slate-200">
+                  ... 이어서 6일차부터 ${scheduledCards.length}일차까지 총 ${remainCount}개 날짜도 동일한 규칙으로 작동합니다.
+                </div>`
+              : ''
+          }
+        </div>
+      `;
+    }
+
+    function updatePreviewSelector() {
+      const selectEl = document.getElementById('previewCardSelect');
+      const confirmed = getConfirmedCards();
+      const scheduledCards = appState.scheduledCardIds
+        .map((id, idx) => ({ card: confirmed.find((c) => c.id === id), day: idx + 1 }))
+        .filter((item) => Boolean(item.card));
+
+      if (scheduledCards.length === 0) {
+        selectEl.innerHTML = '<option value="">활동을 먼저 추가·채택하세요</option>';
+        previewTestState.selectedOutcome = null;
+        renderPreviewBox();
+        return;
+      }
+
+      const prevVal = selectEl.value;
+      selectEl.innerHTML = scheduledCards
+        .map(
+          ({ card, day }) =>
+            `<option value="${card.id}">${day}일차: ${escapeHtml(card.guideline.slice(0, 20))}${card.guideline.length > 20 ? '...' : ''}</option>`
+        )
+        .join('');
+
+      if (scheduledCards.some((item) => item.card.id === prevVal)) {
+        selectEl.value = prevVal;
+      }
+      previewTestState.selectedOutcome = null;
+      renderPreviewBox();
+    }
+
+    function triggerPreviewOutcome(outcome) {
+      previewTestState.selectedOutcome = outcome;
+      renderPreviewBox();
+    }
+
+    function renderPreviewBox() {
+      const screenEl = document.getElementById('previewScreenContent');
+      const selectEl = document.getElementById('previewCardSelect');
+      const selectedId = selectEl ? selectEl.value : '';
+      const dayIdx = appState.scheduledCardIds.indexOf(selectedId);
+      const card = getConfirmedCards().find((c) => c.id === selectedId);
+
+      if (!card) {
+        screenEl.innerHTML = `
+          <div class="my-auto text-center py-10 text-slate-400">
+            <p class="font-bold text-base">미리보기 대기 중</p>
+            <p class="text-xs mt-1">위에서 대체 활동을 추가하거나 채택하면 날짜별 화면을 시험해 볼 수 있어요.</p>
+          </div>
+        `;
+        return;
+      }
+
+      const groupTitle = appState.step1.groupName.trim() || '우리 모둠 30일 행동 추천 앱';
+
+      let feedbackHtml = '';
+      if (previewTestState.selectedOutcome === 'success') {
+        feedbackHtml = `
+          <div class="mt-3 bg-emerald-50 border-2 border-emerald-400 rounded-2xl p-3">
+            <div class="text-xs font-extrabold text-emerald-800 mb-1">🙆 실천했을 때 화면 결과:</div>
+            <p class="text-xs sm:text-sm font-bold text-emerald-950 leading-relaxed">${escapeHtml(card.successFeedback)}</p>
+          </div>
+        `;
+      } else if (previewTestState.selectedOutcome === 'hard') {
+        feedbackHtml = `
+          <div class="mt-3 bg-amber-50 border-2 border-amber-400 rounded-2xl p-3">
+            <div class="text-xs font-extrabold text-amber-900 mb-1">🤔 실천이 어려웠을 때 화면 결과:</div>
+            <p class="text-xs sm:text-sm font-bold text-amber-950 leading-relaxed">${escapeHtml(card.hardFeedback)}</p>
+          </div>
+        `;
+      } else {
+        feedbackHtml = `
+          <div class="mt-3 bg-slate-100 rounded-2xl p-2.5 text-center text-xs text-slate-500">
+            아래 두 버튼 중 하나를 눌러 피드백을 시험해 보세요!
+          </div>
+        `;
+      }
+
+      screenEl.innerHTML = `
+        <div>
+          <div class="flex items-center justify-between border-b border-slate-100 pb-2 mb-2.5">
+            <span class="text-xs font-extrabold text-teal-700">${escapeHtml(groupTitle)}</span>
+            <span class="text-[11px] px-2 py-0.5 rounded-full bg-teal-100 text-teal-900 font-extrabold">${dayIdx + 1}일차 · ${getSourceLabel(card.source)}</span>
+          </div>
+
+          <div class="bg-teal-50/80 rounded-2xl p-3.5 border border-teal-200 space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-teal-800">오늘의 대체 활동</span>
+              <span class="text-[11px] font-bold text-slate-600">⏱ ${escapeHtml(card.duration || '-')}</span>
+            </div>
+            <div class="text-base font-extrabold text-slate-900 leading-snug">${escapeHtml(card.guideline)}</div>
+            <p class="text-xs text-slate-700 leading-relaxed">${escapeHtml(card.method)}</p>
+            <div class="text-[11px] text-slate-600 pt-1.5 border-t border-teal-200/70 space-y-0.5">
+              <div><strong>• 준비물:</strong> ${escapeHtml(card.materials || '없음')}</div>
+              <div><strong>• 실내 대안:</strong> ${escapeHtml(card.indoorAlt || '-')}</div>
+              <div><strong>• 추천 이유:</strong> ${escapeHtml(card.reason)}</div>
+            </div>
+          </div>
+
+          ${feedbackHtml}
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-slate-100">
+          <button
+            type="button"
+            onclick="triggerPreviewOutcome('success')"
+            class="btn-touch rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs sm:text-sm px-2 py-2.5 transition shadow-2xs"
+          >
+            실천했어요!
+          </button>
+          <button
+            type="button"
+            onclick="triggerPreviewOutcome('hard')"
+            class="btn-touch rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-xs sm:text-sm px-2 py-2.5 transition shadow-2xs"
+          >
+            실천이 어려웠어요
+          </button>
+        </div>
+      `;
+    }
+
+    function buildStructuredPrompt() {
+      const s1 = appState.step1;
+      const valOrPlaceholder = (v, label) => (v && v.trim() ? v.trim() : `(아직 입력하지 않음: ${label})`);
+
+      const confirmed = getConfirmedCards();
+      const scheduledCards = appState.scheduledCardIds
+        .map((id, idx) => ({ card: confirmed.find((c) => c.id === id), day: idx + 1 }))
+        .filter((item) => Boolean(item.card));
+
+      const studentCount = scheduledCards.filter((item) => item.card.source === 'student').length;
+      const aiCount = scheduledCards.filter((item) => item.card.source === 'ai').length;
+
+      let rulesSection = '';
+      if (scheduledCards.length === 0) {
+        rulesSection = '- (아직 확정·배치된 30일 활동이 없습니다. 2단계에서 활동을 추가하거나 AI 제안을 검토·채택해 주세요.)';
+      } else {
+        rulesSection = scheduledCards
+          .map(
+            ({ card, day }) => `[${day}일차 활동 | 작성 출처: ${getSourceLabel(card.source)} | 검토 상태: ${getStatusLabel(card.reviewStatus)}]
+- 활동 이름: ${card.guideline}
+- 구체적인 실천 방법: ${card.method}
+- 예상 소요 시간: ${card.duration}
+- 준비물: ${card.materials}
+- 실내 대안 또는 다른 실천 방법: ${card.indoorAlt}
+- 추천 이유: ${card.reason}
+- '실천했어요!' 버튼 클릭 시 피드백: ${card.successFeedback}
+- '실천이 어려웠어요' 버튼 클릭 시 피드백: ${card.hardFeedback}`
+          )
+          .join('\n\n');
+      }
+
+      return `초등학교 6학년 실과·도덕 융합 프로젝트용 '30일 스마트폰 대체 행동 추천 웹앱' 프로토타입을 HTML, CSS, JavaScript 단일 파일로 만들어 주세요.
+
+[1. 기본 정보]
+- 모둠명: ${valOrPlaceholder(s1.groupName, '모둠명')}
+- 해결할 문제: ${valOrPlaceholder(s1.problem, '해결할 문제')}
+- 주요 사용자: ${valOrPlaceholder(s1.targetUser, '주요 사용자')}
+- 조사 근거와 출처: ${valOrPlaceholder(s1.evidence, '조사 근거와 출처')}
+- 대표 추천 수칙: ${valOrPlaceholder(s1.coreGuideline, '대표 추천 수칙')}
+- 추천 이유: ${valOrPlaceholder(s1.guidelineReason, '추천 이유')}
+
+[2. 최종 확정된 1~30일 스마트폰 대체 활동 목록 (총 ${scheduledCards.length}일 배치: 학생 작성 ${studentCount}개, 학생 검토·채택 AI 제안 ${aiCount}개)]
+${rulesSection}
+
+[3. 화면 및 기능 요청사항]
+- 1일차부터 ${scheduledCards.length || 30}일차까지 날짜별 전체 활동 목록을 한눈에 보고, 원하는 날짜(예: 1일차~30일차)를 선택해 오늘의 대체 활동을 자세히 확인하는 기능을 넣어 주세요.
+- 각 날짜별 활동 화면에는 활동 이름, 구체적인 실천 방법, 예상 소요 시간, 준비물, 실내 대안(또는 다른 실천 방법), 추천 이유, 그리고 작성 출처('학생 작성' 또는 'AI 제안') 배지를 함께 표시해 주세요.
+- 각 날짜 화면마다 '실천했어요!' 버튼과 '실천이 어려웠어요' 버튼을 두고, 누르면 위에 적힌 해당 활동의 피드백 문구만 정확히 보여 주며 날짜별 실천 완료 표시(스탬프/체크)가 기록되게 해 주세요.
+- 초등학교 6학년이 읽기 쉬운 큰 글씨와 태블릿에서 누르기 편한 큰 버튼으로 구성해 주세요.
+- 위에 적힌 조사 근거와 출처를 화면 아래쪽에 그대로 표시해 주세요.
+- 화면 하단에 '이 앱은 모둠의 기획을 바탕으로 AI 도구를 활용해 제작했습니다.'라는 안내 문구를 넣어 주세요.
+- 학생의 실명, 연락처, 개인 스마트폰 사용 기록을 입력받거나 외부로 전송하지 않게 만들어 주세요.
+- [중요 제약] 위에 확정된 활동 목록과 문구 외에 앱 제작 AI가 새로운 활동이나 건강 정보·수칙을 임의로 추가하거나 변경하지 마세요.`;
+    }
+
+    function rebuildPromptFromInputs(resetManualFlag = false) {
+      if (resetManualFlag) {
+        appState.promptManuallyEdited = false;
+        appState.promptOutOfSync = false;
+      }
+      const generated = buildStructuredPrompt();
+      appState.promptText = generated;
+      const textarea = document.getElementById('finalPromptTextarea');
+      if (textarea) textarea.value = generated;
+      updatePromptSyncUI();
+      saveState();
+    }
+
+    function onPromptManualEdit(value) {
+      appState.promptText = value;
+      appState.promptManuallyEdited = true;
+      appState.promptOutOfSync = false;
+      updatePromptSyncUI();
+      saveState();
+    }
+
+    function copyFinalPrompt() {
+      const textarea = document.getElementById('finalPromptTextarea');
+      const feedback = document.getElementById('copyFeedbackMsg');
+      if (!textarea) return;
+
+      textarea.select();
+      textarea.setSelectionRange(0, textarea.value.length);
+
+      let copied = false;
+      try {
+        copied = document.execCommand('copy');
+      } catch (e) {
+        copied = false;
+      }
+
+      if (feedback) {
+        if (copied) {
+          feedback.textContent = '프롬프트가 클립보드에 복사되었습니다! 이제 AI 도구에 붙여넣어 앱을 만들어 보세요.';
+          feedback.className = 'mt-2 text-sm font-bold text-teal-700';
+        } else {
+          feedback.textContent = '자동 복사가 제한되었습니다. 위 상자 안의 글자를 직접 선택해 복사해 주세요.';
+          feedback.className = 'mt-2 text-sm font-bold text-amber-700';
+        }
+        feedback.classList.remove('hidden');
+      }
+    }
+
+    function addHahRecord() {
+      appState.hahRecords.push({
+        id: generateId(),
+        intent: '',
+        aiResult: '',
+        decision: '수정하기',
+        reason: '',
+        recheckResult: ''
+      });
+      saveState();
+      renderHahRecords();
+    }
+
+    function updateHahField(recordId, field, value) {
+      const rec = appState.hahRecords.find((r) => r.id === recordId);
+      if (!rec) return;
+      rec[field] = value;
+      saveState();
+    }
+
+    function deleteHahRecord(recordId) {
+      if (appState.hahRecords.length <= 1) return;
+      appState.hahRecords = appState.hahRecords.filter((r) => r.id !== recordId);
+      saveState();
+      renderHahRecords();
+    }
+
+    function renderHahRecords() {
+      const container = document.getElementById('hahRecordsContainer');
+      const canDelete = appState.hahRecords.length > 1;
+
+      container.innerHTML = appState.hahRecords
+        .map(
+          (rec, idx) => `
+          <div class="bg-slate-50 rounded-2xl border border-slate-200 p-4 sm:p-5 space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-200 pb-2.5">
+              <span class="font-extrabold text-base text-slate-900">검토·수정 기록 #${idx + 1}</span>
+              ${
+                canDelete
+                  ? `<button type="button" onclick="deleteHahRecord('${rec.id}')" class="px-3 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold">기록 삭제</button>`
+                  : `<span class="text-xs text-slate-400">기본 기록</span>`
+              }
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-extrabold text-slate-800 mb-1">1. 우리의 의도 (AI에게 무엇을 요청했나요?)</label>
+                <textarea
+                  rows="2"
+                  oninput="updateHahField('${rec.id}', 'intent', this.value)"
+                  placeholder="예: 보행 중 스마트폰 끄기 등 부족한 대체 활동 15개를 제안해 달라고 요청함"
+                  class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                >${escapeHtml(rec.intent)}</textarea>
+              </div>
+
+              <div>
+                <label class="block text-sm font-extrabold text-slate-800 mb-1">2. AI의 결과 (AI가 어떤 제안을 내놓았나요?)</label>
+                <textarea
+                  rows="2"
+                  oninput="updateHahField('${rec.id}', 'aiResult', this.value)"
+                  placeholder="예: 태블릿으로 영상 보기 활동이나 조사 출처가 빠진 문구가 섞여 있었음"
+                  class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                >${escapeHtml(rec.aiResult)}</textarea>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label class="block text-sm font-extrabold text-slate-800 mb-1">3. 우리 모둠의 결정</label>
+                <select
+                  onchange="updateHahField('${rec.id}', 'decision', this.value)"
+                  class="btn-touch w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                >
+                  <option value="그대로 쓰기" ${rec.decision === '그대로 쓰기' ? 'selected' : ''}>그대로 쓰기</option>
+                  <option value="수정하기" ${rec.decision === '수정하기' ? 'selected' : ''}>수정하기</option>
+                  <option value="버리기" ${rec.decision === '버리기' ? 'selected' : ''}>버리기</option>
+                </select>
+              </div>
+
+              <div class="md:col-span-2">
+                <label class="block text-sm font-extrabold text-slate-800 mb-1">4. 판단 이유 (왜 그렇게 결정했나요?)</label>
+                <input
+                  type="text"
+                  value="${escapeHtml(rec.reason)}"
+                  oninput="updateHahField('${rec.id}', 'reason', this.value)"
+                  placeholder="예: 다른 화면 기기로 대체하면 안 되고, 비 오는 날 실내 대안도 꼭 필요해서 수정 후 채택함"
+                  class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-sm font-extrabold text-slate-800 mb-1">5. 재확인 결과 (수정 후 다시 확인하니 어떤가요?)</label>
+              <input
+                type="text"
+                value="${escapeHtml(rec.recheckResult)}"
+                oninput="updateHahField('${rec.id}', 'recheckResult', this.value)"
+                placeholder="예: 30일 일정표와 앱 미리보기에서 활동 방법·실내 대안·피드백이 모두 바르게 표시됨을 확인함"
+                class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+              />
+            </div>
+          </div>
+        `
+        )
+        .join('');
+    }
+
+    function printReport() {
+      const s1 = appState.step1;
+      const printArea = document.getElementById('printArea');
+      const today = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+
+      const confirmed = getConfirmedCards();
+      const scheduledCards = appState.scheduledCardIds
+        .map((id, idx) => ({ card: confirmed.find((c) => c.id === id), day: idx + 1 }))
+        .filter((item) => Boolean(item.card));
+
+      const studentCount = scheduledCards.filter((item) => item.card.source === 'student').length;
+      const aiCount = scheduledCards.filter((item) => item.card.source === 'ai').length;
+      const excludedCount = getExcludedCards().length;
+
+      const rulesHtml =
+        scheduledCards.length === 0
+          ? '<p>확정·배치된 30일 활동이 없습니다.</p>'
+          : `
+            <p style="font-size: 9.5pt; margin-bottom: 6px;">
+              <strong>구성 요약:</strong> 총 ${scheduledCards.length}일 배치 (학생 직접 작성 ${studentCount}개 / 학생 검토·채택 AI 제안 ${aiCount}개 / 제외 처리 ${excludedCount}개)
+            </p>
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: 7%;">날짜</th>
+                  <th style="width: 11%;">출처·상태</th>
+                  <th style="width: 24%;">활동 이름 및 실천 방법</th>
+                  <th style="width: 18%;">시간·준비물·실내대안</th>
+                  <th style="width: 20%;">실천했을 때 피드백</th>
+                  <th style="width: 20%;">실천이 어려웠을 때 피드백</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${scheduledCards
+                  .map(
+                    ({ card, day }) => `
+                    <tr>
+                      <td><strong>${day}일차</strong></td>
+                      <td>${getSourceLabel(card.source)}<br/>(${getStatusLabel(card.reviewStatus)})</td>
+                      <td>
+                        <strong>${escapeHtml(card.guideline)}</strong><br/>
+                        <span style="font-size: 9pt;">${escapeHtml(card.method)}</span><br/>
+                        <span style="font-size: 8.5pt; color: #475569;">이유: ${escapeHtml(card.reason)}</span>
+                      </td>
+                      <td style="font-size: 9pt;">
+                        시간: ${escapeHtml(card.duration)}<br/>
+                        준비물: ${escapeHtml(card.materials)}<br/>
+                        대안: ${escapeHtml(card.indoorAlt)}
+                      </td>
+                      <td style="font-size: 9pt;">${escapeHtml(card.successFeedback)}</td>
+                      <td style="font-size: 9pt;">${escapeHtml(card.hardFeedback)}</td>
+                    </tr>
+                  `
+                  )
+                  .join('')}
+              </tbody>
+            </table>
+          `;
+
+      const hahHtml = `
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 6%;">번호</th>
+              <th style="width: 22%;">우리의 의도</th>
+              <th style="width: 22%;">AI의 결과</th>
+              <th style="width: 12%;">결정</th>
+              <th style="width: 20%;">판단 이유</th>
+              <th style="width: 18%;">재확인 결과</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${appState.hahRecords
+              .map(
+                (r, i) => `
+                <tr>
+                  <td>${i + 1}</td>
+                  <td>${escapeHtml(r.intent)}</td>
+                  <td>${escapeHtml(r.aiResult)}</td>
+                  <td><strong>${escapeHtml(r.decision)}</strong></td>
+                  <td>${escapeHtml(r.reason)}</td>
+                  <td>${escapeHtml(r.recheckResult)}</td>
+                </tr>
+              `
+              )
+              .join('')}
+          </tbody>
+        </table>
+      `;
+
+      printArea.innerHTML = `
+        <div style="border-bottom: 2px solid #0f766e; padding-bottom: 8px; margin-bottom: 14px;">
+          <div style="font-size: 10pt; color: #0f766e; font-weight: bold;">초등학교 6학년 실과·도덕 융합 프로젝트 | 스마트폰 잠시 멈춤, 건강한 일상 찾기</div>
+          <h1 style="font-size: 17pt; font-weight: bold; margin: 4px 0;">우리 모둠 30일 행동 추천 앱 기획서 및 H-A-H 검토·수정 기록서</h1>
+          <div style="font-size: 10pt; color: #334155;">
+            <strong>모둠명:</strong> ${escapeHtml(s1.groupName || '(미입력)')} &nbsp;|&nbsp;
+            <strong>출력일:</strong> ${today}
+          </div>
+        </div>
+
+        <div class="print-section">
+          <h2 style="font-size: 13pt; font-weight: bold; margin-bottom: 8px;">1. 문제와 수칙 정리</h2>
+          <table>
+            <tbody>
+              <tr><th style="width: 24%;">해결할 문제</th><td>${escapeHtml(s1.problem || '')}</td></tr>
+              <tr><th>주요 사용자</th><td>${escapeHtml(s1.targetUser || '')}</td></tr>
+              <tr><th>조사 근거와 출처</th><td>${escapeHtml(s1.evidence || '')}</td></tr>
+              <tr><th>핵심 추천 수칙</th><td>${escapeHtml(s1.coreGuideline || '')}</td></tr>
+              <tr><th>추천 이유</th><td>${escapeHtml(s1.guidelineReason || '')}</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="print-section">
+          <h2 style="font-size: 13pt; font-weight: bold; margin-bottom: 8px;">2. 30일 스마트폰 대체 활동 배치 및 피드백 설계</h2>
+          ${rulesHtml}
+        </div>
+
+        <div class="print-section">
+          <h2 style="font-size: 13pt; font-weight: bold; margin-bottom: 8px;">3. 제작용 프롬프트 정리본</h2>
+          <pre style="white-space: pre-wrap; font-family: inherit; font-size: 9.5pt; background: #f8fafc; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;">${escapeHtml(appState.promptText)}</pre>
+        </div>
+
+        <div class="print-section">
+          <h2 style="font-size: 13pt; font-weight: bold; margin-bottom: 8px;">4. H-A-H (인간 → AI → 인간) 검토·수정 기록</h2>
+          ${hahHtml}
+        </div>
+      `;
+
+      window.print();
+    }
+
+    function openModal(modalId) {
+      const el = document.getElementById(modalId);
+      if (el) el.classList.remove('hidden');
+    }
+
+    function closeModal(modalId) {
+      const el = document.getElementById(modalId);
+      if (el) el.classList.add('hidden');
+    }
+
+    function confirmResetAll() {
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+      } catch (e) {
+        console.error('localStorage 초기화 오류:', e);
+      }
+      appState = createDefaultState();
+      previewTestState.selectedOutcome = null;
+
+      restoreStep1Inputs();
+      refreshStep2All();
+      rebuildPromptFromInputs(true);
+      renderHahRecords();
+
+      closeModal('resetModal');
+      switchStep(1);
+    }
+
+    function showWorkFileToast(message, isError = false) {
+      const toast = document.getElementById('workFileToast');
+      const msgEl = document.getElementById('workFileToastMsg');
+      if (!toast || !msgEl) return;
+
+      msgEl.textContent = message;
+      toast.className = `no-print fixed bottom-5 left-1/2 -translate-x-1/2 z-50 px-4 py-3 rounded-2xl shadow-lg border font-bold text-sm flex items-center gap-2 max-w-[92vw] ${
+        isError
+          ? 'bg-rose-950 text-rose-50 border-rose-700'
+          : 'bg-slate-900 text-white border-slate-700'
+      }`;
+      toast.classList.remove('hidden');
+
+      clearTimeout(toast._hideTimer);
+      toast._hideTimer = setTimeout(() => {
+        toast.classList.add('hidden');
+      }, 3600);
+    }
+
+    function exportWorkFile() {
+      try {
+        const exportObj = {
+          appType: 'grade6_smartphone_action_app_planner',
+          version: 2,
+          exportedAt: new Date().toISOString(),
+          state: appState
+        };
+        const jsonStr = JSON.stringify(exportObj, null, 2);
+        const blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+
+        const groupRaw = (appState.step1.groupName || '우리모둠').trim();
+        const safeGroup = groupRaw.replace(/[\\/:*?"<>|]/g, '_');
+        const datePart = new Date().toISOString().slice(0, 10);
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${safeGroup}_30일행동추천앱설계_${datePart}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        showWorkFileToast('작업 파일(.json)을 저장했습니다. 다른 기기에서도 불러올 수 있어요!');
+      } catch (e) {
+        console.error('작업 파일 저장 오류:', e);
+        showWorkFileToast('작업 파일 저장 중 오류가 발생했습니다.', true);
+      }
+    }
+
+    function triggerImportWorkFile() {
+      const input = document.getElementById('importFileInput');
+      if (!input) return;
+      input.value = '';
+      input.click();
+    }
+
+    function handleImportFileSelected(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const parsed = JSON.parse(String(e.target.result || ''));
+          const normalized = validateAndNormalizeImportedState(parsed);
+          if (!normalized) {
+            showWorkFileToast('올바른 설계 도우미 작업 파일(.json)이 아닙니다.', true);
+            return;
+          }
+
+          pendingImportData = {
+            fileName: file.name,
+            state: normalized
+          };
+          const nameEl = document.getElementById('importFileNameText');
+          if (nameEl) nameEl.textContent = file.name;
+          openModal('importConfirmModal');
+        } catch (err) {
+          console.error('작업 파일 파싱 오류:', err);
+          showWorkFileToast('파일을 읽을 수 없습니다. JSON 형식이 손상되었는지 확인해 주세요.', true);
+        }
+      };
+      reader.readAsText(file, 'utf-8');
+    }
+
+    function validateAndNormalizeImportedState(rawObj) {
+      if (!rawObj || typeof rawObj !== 'object') return null;
+
+      const importedState =
+        rawObj.state && typeof rawObj.state === 'object' ? rawObj.state : rawObj;
+
+      const hasStep1 = importedState.step1 && typeof importedState.step1 === 'object';
+      const hasValidRules = Array.isArray(importedState.ruleCards);
+      const hasValidHah = Array.isArray(importedState.hahRecords);
+
+      if (!hasStep1 && !hasValidRules && !hasValidHah) {
+        return null;
+      }
+
+      const defaults = createDefaultState();
+      const normalizedStep1 = { ...defaults.step1 };
+      if (hasStep1) {
+        STEP1_FIELDS.forEach((field) => {
+          if (typeof importedState.step1[field] === 'string') {
+            normalizedStep1[field] = importedState.step1[field];
+          }
+        });
+      }
+
+      const normalizedRuleCards = hasValidRules
+        ? importedState.ruleCards
+            .filter((c) => c && typeof c === 'object')
+            .map((c) => normalizeActivityCard(c))
+        : [];
+
+      const normalizedScheduledIds = Array.isArray(importedState.scheduledCardIds)
+        ? importedState.scheduledCardIds.filter((id) => typeof id === 'string')
+        : [];
+
+      const normalizedHahRecords =
+        hasValidHah && importedState.hahRecords.length > 0
+          ? importedState.hahRecords
+              .filter((r) => r && typeof r === 'object')
+              .map((r) => ({
+                id: typeof r.id === 'string' && r.id ? r.id : generateId(),
+                intent: typeof r.intent === 'string' ? r.intent : '',
+                aiResult: typeof r.aiResult === 'string' ? r.aiResult : '',
+                decision: typeof r.decision === 'string' ? r.decision : '수정하기',
+                reason: typeof r.reason === 'string' ? r.reason : '',
+                recheckResult: typeof r.recheckResult === 'string' ? r.recheckResult : ''
+              }))
+          : defaults.hahRecords;
+
+      const validStepNum =
+        Number.isInteger(importedState.currentStep) && importedState.currentStep >= 1 && importedState.currentStep <= 4
+          ? importedState.currentStep
+          : 1;
+
+      return {
+        currentStep: validStepNum,
+        step1: normalizedStep1,
+        ruleCards: normalizedRuleCards,
+        scheduledCardIds: normalizedScheduledIds,
+        promptText: typeof importedState.promptText === 'string' ? importedState.promptText : '',
+        promptManuallyEdited: Boolean(importedState.promptManuallyEdited),
+        promptOutOfSync: Boolean(importedState.promptOutOfSync),
+        hahRecords: normalizedHahRecords.length > 0 ? normalizedHahRecords : defaults.hahRecords
+      };
+    }
+
+    function confirmImportWorkFile() {
+      if (!pendingImportData) {
+        closeModal('importConfirmModal');
+        return;
+      }
+
+      const { fileName, state } = pendingImportData;
+      pendingImportData = null;
+
+      appState = state;
+      syncScheduleWithAccepted(false);
+      previewTestState.selectedOutcome = null;
+
+      saveState();
+      restoreStep1Inputs();
+      updatePromptSyncUI();
+      closeModal('importConfirmModal');
+
+      switchStep(appState.currentStep || 1);
+      showWorkFileToast(`'${fileName}' 작업 파일을 불러와 작성 내용을 복원했습니다!`);
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      setStorageErrorState(storageFailed);
+      restoreStep1Inputs();
+      bindStep1Events();
+      refreshStep2All();
+      renderHahRecords();
+      updatePromptSyncUI();
+      switchStep(appState.currentStep || 1);
+    });
+  </script>
+</body>
+</html>
