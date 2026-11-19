@@ -1,0 +1,2530 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>기후위기 극복 & 탄소발자국 줄이기 프로젝트</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Canvas Confetti CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <!-- MQTT over WSS (HTTPS 443포트) 실시간 중계 클라이언트 CDN -->
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js" onerror="var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/mqtt/dist/mqtt.min.js';document.head.appendChild(s);"></script>
+  <!-- Google Fonts (Pretendard & Jua) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;500;700;800&display=swap" rel="stylesheet" />
+
+  <style>
+    body {
+      font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Malgun Gothic', sans-serif;
+      background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 50%, #e0f2fe 100%);
+      color: #1e293b;
+      word-break: keep-all;
+    }
+
+    .font-title {
+      font-family: 'Jua', sans-serif;
+    }
+
+    /* 커스텀 슬라이더 */
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      height: 12px;
+      border-radius: 999px;
+      background: #cbd5e1;
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: #10b981;
+      border: 4px solid #ffffff;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+      cursor: pointer;
+      transition: transform 0.15s ease;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.12);
+    }
+
+    /* 부드러운 둥실둥실 일러스트 모션 */
+    @keyframes floatSlow {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-6px); }
+    }
+    .animate-float {
+      animation: floatSlow 3.2s ease-in-out infinite;
+    }
+
+    /* 지구 캐릭터 콕 찌르기 튕김 애니메이션 */
+    @keyframes earthBounce {
+      0% { transform: scale(1); }
+      30% { transform: scale(1.14, 0.88); }
+      55% { transform: scale(0.92, 1.08); }
+      80% { transform: scale(1.04, 0.97); }
+      100% { transform: scale(1); }
+    }
+    .earth-poke {
+      animation: earthBounce 0.55s ease;
+    }
+
+    /* 탭 전환 애니메이션 */
+    .step-section {
+      animation: fadeInUp 0.28s ease-out;
+    }
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- ==================== 상단 헤더 & 실시간 학급 연결 바 ==================== -->
+  <header class="bg-white/90 backdrop-blur-md border-b border-emerald-200 sticky top-0 z-30 shadow-xs">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+      <!-- 로고 및 제목 -->
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center text-2xl shadow-sm shrink-0">
+          🌍
+        </div>
+        <div>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="text-xs font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+              초등 6학년 과학 · 실과 연계
+            </span>
+            <span id="room-status-badge" class="text-xs font-extrabold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-300 flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-slate-400 inline-block"></span>
+              <span>개인 학습 모드 (4단계 연결 전)</span>
+            </span>
+          </div>
+          <h1 class="font-title text-xl sm:text-2xl text-slate-900 tracking-wide mt-0.5">
+            기후위기 극복! 탄소발자국 줄이기 에이전트
+          </h1>
+        </div>
+      </div>
+
+      <!-- 우측 학급 입장코드 버튼 -->
+      <div class="flex items-center gap-2">
+        <button
+          type="button"
+          id="open-room-btn"
+          onclick="openClassRoomModal()"
+          class="px-4 py-2.5 rounded-2xl bg-amber-50 hover:bg-amber-100 text-amber-950 border-2 border-amber-300 font-extrabold text-xs sm:text-sm flex items-center gap-2 shadow-2xs transition cursor-pointer"
+        >
+          <span>🏫</span>
+          <span id="room-btn-text">학급 입장코드 연결</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ==================== 5단계 상단 내비게이션 탭 ==================== -->
+  <main class="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
+    <nav aria-label="학습 단계 선택" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
+      <button
+        type="button"
+        id="nav-step-1"
+        onclick="switchTab(1)"
+        class="p-3.5 rounded-2xl border-2 text-left transition flex items-center gap-3 bg-emerald-600 text-white border-emerald-600 shadow-md cursor-pointer"
+      >
+        <span class="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center font-extrabold text-sm shrink-0">1</span>
+        <div>
+          <div class="text-[11px] opacity-90 font-bold">STEP 1 · 탐색</div>
+          <div class="font-extrabold text-sm sm:text-base">일상 탄소발자국</div>
+        </div>
+      </button>
+
+      <button
+        type="button"
+        id="nav-step-2"
+        onclick="switchTab(2)"
+        class="p-3.5 rounded-2xl border-2 text-left transition flex items-center gap-3 bg-white text-slate-700 border-slate-200 hover:bg-emerald-50 cursor-pointer"
+      >
+        <span class="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center font-extrabold text-sm shrink-0">2</span>
+        <div>
+          <div class="text-[11px] opacity-80 font-bold">STEP 2 · 진단</div>
+          <div class="font-extrabold text-sm sm:text-base">나의 지구 체온계</div>
+        </div>
+      </button>
+
+      <button
+        type="button"
+        id="nav-step-3"
+        onclick="switchTab(3)"
+        class="p-3.5 rounded-2xl border-2 text-left transition flex items-center gap-3 bg-white text-slate-700 border-slate-200 hover:bg-emerald-50 cursor-pointer"
+      >
+        <span class="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center font-extrabold text-sm shrink-0">3</span>
+        <div>
+          <div class="text-[11px] opacity-80 font-bold">STEP 3 · 선택·구상</div>
+          <div class="font-extrabold text-sm sm:text-base">실천 분야·방법</div>
+        </div>
+      </button>
+
+      <button
+        type="button"
+        id="nav-step-4"
+        onclick="switchTab(4)"
+        class="p-3.5 rounded-2xl border-2 text-left transition flex items-center gap-3 bg-white text-slate-700 border-slate-200 hover:bg-emerald-50 cursor-pointer"
+      >
+        <span class="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center font-extrabold text-sm shrink-0">4</span>
+        <div>
+          <div class="text-[11px] opacity-80 font-bold">STEP 4 · 설계</div>
+          <div class="font-extrabold text-sm sm:text-base">아이디어 완성</div>
+        </div>
+      </button>
+
+      <button
+        type="button"
+        id="nav-step-5"
+        onclick="switchTab(5)"
+        class="p-3.5 rounded-2xl border-2 text-left transition flex items-center gap-3 bg-white text-slate-700 border-slate-200 hover:bg-emerald-50 cursor-pointer"
+      >
+        <span class="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center font-extrabold text-sm shrink-0">5</span>
+        <div>
+          <div class="text-[11px] opacity-80 font-bold">STEP 5 · 공유</div>
+          <div class="font-extrabold text-sm sm:text-base">학급 탄소 지도</div>
+        </div>
+      </button>
+    </nav>
+
+    <!-- ===================================================================== -->
+    <!-- 1단계: 일상 속 탄소발자국 탐색 (Exploration)                            -->
+    <!-- ===================================================================== -->
+    <section id="section-1" class="step-section space-y-6">
+      <div class="bg-white rounded-3xl border border-emerald-100 p-6 sm:p-8 shadow-sm">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-slate-100">
+          <div>
+            <span class="inline-block px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 font-extrabold text-xs mb-2">
+              1단계 · 숨은 온실가스 찾기
+            </span>
+            <h2 class="font-title text-2xl sm:text-3xl text-slate-900">
+              우리 학교와 집, 어디에서 탄소발자국이 생길까요?
+            </h2>
+            <p class="text-slate-600 text-sm sm:text-base mt-1">
+              생활 영역 카드를 눌러 각 활동에서 배출되는 이산화탄소(CO₂)와 줄이는 방법을 살펴보세요!
+            </p>
+          </div>
+          <div class="bg-emerald-50 border border-emerald-200 rounded-2xl px-4 py-3 text-xs sm:text-sm text-emerald-900 font-bold shrink-0">
+            💡 카드를 클릭하면 도움 자료가 열려요!
+          </div>
+        </div>
+
+        <!-- 12대 생활 속 숨은 온실가스 카드 그리드 (2단계와 1:1 매칭) -->
+        <div id="step1-cards-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-6">
+          <!-- JS로 12개 카드 렌더링됨 -->
+        </div>
+      </div>
+
+      <div class="flex justify-end">
+        <button
+          type="button"
+          onclick="switchTab(2)"
+          class="px-6 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm sm:text-base shadow-md transition cursor-pointer"
+        >
+          2단계: 나의 지구 체온 진단하기 ➔
+        </button>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- 2단계: 나의 지구 체온계 (Diagnosis - 1단계 12가지 주제와 1:1 연결)     -->
+    <!-- ===================================================================== -->
+    <section id="section-2" class="step-section hidden space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- 좌측: 인터랙티브 지구 캐릭터 & 실시간 체온계 -->
+        <div class="lg:col-span-5 bg-white rounded-3xl border border-emerald-100 p-6 shadow-sm flex flex-col justify-between items-center text-center">
+          <div class="w-full">
+            <span class="inline-block px-3 py-1 rounded-full bg-sky-100 text-sky-800 font-extrabold text-xs mb-1">
+              실시간 지구 건강 상태
+            </span>
+            <h2 class="font-title text-2xl text-slate-900">나의 생활 습관으로 본 지구 체온계</h2>
+            <p class="text-xs text-slate-500 mt-1">지구 캐릭터를 콕 눌러보면 응원 메시지를 들을 수 있어요!</p>
+          </div>
+
+          <!-- 지구 캐릭터 & 체온계 나란히 배치 -->
+          <div class="my-5 flex items-center justify-center gap-6 w-full">
+            <button
+              type="button"
+              id="earth-avatar-btn"
+              onclick="pokeEarth()"
+              class="relative w-40 h-40 rounded-full focus:outline-none cursor-pointer group"
+              title="지구 캐릭터를 눌러보세요!"
+            >
+              <svg class="w-full h-full drop-shadow-md" viewBox="0 0 200 200" fill="none">
+                <circle cx="100" cy="100" r="82" fill="#38BDF8" stroke="#0284C7" stroke-width="5"/>
+                <path d="M56 58C72 44 96 48 102 64C108 80 86 92 72 86C58 80 44 68 56 58Z" fill="#34D399"/>
+                <path d="M118 62C136 56 154 72 148 92C142 112 120 116 112 100C104 84 106 66 118 62Z" fill="#10B981"/>
+                <path d="M68 118C84 112 112 122 108 142C104 158 76 156 64 142C54 130 56 122 68 118Z" fill="#34D399"/>
+                <circle cx="76" cy="96" r="7" fill="#0F172A"/>
+                <circle cx="124" cy="96" r="7" fill="#0F172A"/>
+                <circle cx="78" cy="94" r="2.5" fill="#FFFFFF"/>
+                <circle cx="126" cy="94" r="2.5" fill="#FFFFFF"/>
+                <ellipse cx="62" cy="108" rx="9" ry="5" fill="#FDA4AF" opacity="0.75"/>
+                <ellipse cx="138" cy="108" rx="9" ry="5" fill="#FDA4AF" opacity="0.75"/>
+                <path id="earth-mouth" d="M82 114C90 128 110 128 118 114" stroke="#0F172A" stroke-width="5" stroke-linecap="round"/>
+                <path id="earth-sweat" class="hidden" d="M154 62C154 62 164 76 164 83C164 88.5 159.5 93 154 93C148.5 93 144 88.5 144 83C144 76 154 62 154 62Z" fill="#BAE6FD" stroke="#0284C7" stroke-width="2.5"/>
+              </svg>
+            </button>
+
+            <div class="flex flex-col items-center">
+              <div class="w-8 h-36 bg-slate-100 rounded-full border-4 border-slate-300 p-1 flex items-end justify-center overflow-hidden shadow-inner">
+                <div id="thermo-fill" class="w-full rounded-full bg-emerald-500 transition-all duration-300" style="height: 35%;"></div>
+              </div>
+              <div id="thermo-bulb" class="w-11 h-11 -mt-2 rounded-full bg-emerald-500 border-4 border-white shadow-sm flex items-center justify-center text-white font-extrabold text-[11px]">
+                CO₂
+              </div>
+            </div>
+          </div>
+
+          <div id="earth-speech-bubble" class="w-full bg-emerald-50 border border-emerald-200 rounded-2xl p-3.5 text-xs sm:text-sm font-bold text-emerald-950 mb-4">
+            "나의 생활 습관을 오른쪽에서 하나씩 점검해 보자!"
+          </div>
+
+          <!-- 3대 진단 수치 요약 -->
+          <div class="grid grid-cols-3 gap-2.5 w-full">
+            <div class="bg-slate-50 rounded-2xl p-3 border border-slate-200">
+              <div class="text-[11px] font-bold text-slate-500">가상 지구 체온</div>
+              <div id="stat-earth-temp" class="text-lg font-extrabold text-emerald-600 mt-0.5">36.9°C</div>
+            </div>
+            <div class="bg-slate-50 rounded-2xl p-3 border border-slate-200">
+              <div class="text-[11px] font-bold text-slate-500">주간 탄소 배출</div>
+              <div id="stat-weekly-co2" class="text-lg font-extrabold text-slate-900 mt-0.5">14.2 kg</div>
+            </div>
+            <div class="bg-slate-50 rounded-2xl p-3 border border-slate-200">
+              <div class="text-[11px] font-bold text-slate-500">필요한 소나무</div>
+              <div id="stat-trees-needed" class="text-lg font-extrabold text-teal-700 mt-0.5">2.2 그루</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 우측: 1단계 12가지 주제와 1:1 매칭되는 12개 생활 습관 진단 슬라이더 -->
+        <div class="lg:col-span-7 bg-white rounded-3xl border border-emerald-100 p-6 sm:p-8 shadow-sm space-y-5">
+          <div class="border-b border-slate-100 pb-4">
+            <span class="inline-block px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 font-extrabold text-xs mb-1">
+              2단계 · 주제별 나의 습관 정밀 진단
+            </span>
+            <h2 class="font-title text-2xl text-slate-900">12가지 생활 습관으로 나의 탄소발자국 확인하기</h2>
+            <p class="text-xs sm:text-sm text-slate-600 mt-1">12가지 주제에 대한 나의 일주일 생활 습관을 점검해 보세요.</p>
+          </div>
+
+          <div id="step2-sliders-container" class="space-y-3.5 max-h-[640px] overflow-y-auto pr-1">
+            <!-- JS로 12개 슬라이더 항목 렌더링됨 -->
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between">
+        <button
+          type="button"
+          onclick="switchTab(1)"
+          class="px-5 py-3 rounded-2xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-bold text-sm sm:text-base transition cursor-pointer"
+        >
+          ← 1단계: 일상 탄소발자국
+        </button>
+        <button
+          type="button"
+          onclick="switchTab(3)"
+          class="px-6 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm sm:text-base shadow-md transition cursor-pointer"
+        >
+          3단계: 실천할 분야 선택 및 방법 구체화 ➔
+        </button>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- 3단계: 실천 분야 선택 & 방법 구체화 (NEW Step 3)                      -->
+    <!-- ===================================================================== -->
+    <section id="section-3" class="step-section hidden space-y-6">
+      <div class="bg-white rounded-3xl border border-emerald-100 p-6 sm:p-8 shadow-sm space-y-6">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-slate-100">
+          <div>
+            <span class="inline-block px-3 py-1 rounded-full bg-teal-100 text-teal-900 font-extrabold text-xs mb-2">
+              3단계 · 나만의 실천 주제 고르기 & 방법 구상
+            </span>
+            <h2 class="font-title text-2xl sm:text-3xl text-slate-900">
+              어떤 분야를 어떻게 바꾸어 실천할까요?
+            </h2>
+            <p class="text-slate-600 text-sm sm:text-base mt-1">
+              2단계 진단 결과를 돌아보며 내가 집중적으로 실천할 분야를 고르고, 구체적인 실천 방법을 먼저 설계해 보세요!
+            </p>
+          </div>
+          <div id="step3-diagnosis-alert" class="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 text-xs sm:text-sm text-amber-950 font-bold shrink-0">
+            🔍 2단계에서 점수가 높았던 주제를 우선 추천해요!
+          </div>
+        </div>
+
+        <!-- 3-1. 4대 영역 + 12가지 세부 주제 선택 -->
+        <div class="space-y-3">
+          <div class="text-sm font-extrabold text-slate-900">① 내가 도전할 실천 분야 선택하기</div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3" id="step3-category-cards">
+            <button type="button" onclick="selectPracticeCategory('food')" id="cat-pick-food" class="p-4 rounded-2xl border-2 border-emerald-600 bg-emerald-50 text-left transition cursor-pointer">
+              <div class="text-2xl mb-1">🍱</div>
+              <div class="font-extrabold text-slate-900 text-sm sm:text-base">급식 · 식생활 분야</div>
+              <p class="text-xs text-slate-600 mt-1">잔반 제로, 채소 균형 식단, 우리 고장 제철 먹거리</p>
+            </button>
+            <button type="button" onclick="selectPracticeCategory('class')" id="cat-pick-class" class="p-4 rounded-2xl border-2 border-slate-200 bg-white hover:bg-slate-50 text-left transition cursor-pointer">
+              <div class="text-2xl mb-1">✏️</div>
+              <div class="font-extrabold text-slate-900 text-sm sm:text-base">교실 · 자원순환 분야</div>
+              <p class="text-xs text-slate-600 mt-1">텀블러·손수건 사용, 이면지 활용, 정확한 분리배출</p>
+            </button>
+            <button type="button" onclick="selectPracticeCategory('move')" id="cat-pick-move" class="p-4 rounded-2xl border-2 border-slate-200 bg-white hover:bg-slate-50 text-left transition cursor-pointer">
+              <div class="text-2xl mb-1">🚲</div>
+              <div class="font-extrabold text-slate-900 text-sm sm:text-base">등하교 · 이동수단 분야</div>
+              <p class="text-xs text-slate-600 mt-1">가까운 거리 걷기·자전거, 저층 계단 이용하기</p>
+            </button>
+            <button type="button" onclick="selectPracticeCategory('energy')" id="cat-pick-energy" class="p-4 rounded-2xl border-2 border-slate-200 bg-white hover:bg-slate-50 text-left transition cursor-pointer">
+              <div class="text-2xl mb-1">💡</div>
+              <div class="font-extrabold text-slate-900 text-sm sm:text-base">에너지 · 물 · 디지털 분야</div>
+              <p class="text-xs text-slate-600 mt-1">교실 소등·대기전력 차단, 적정온도, 디지털·물 절약</p>
+            </button>
+          </div>
+        </div>
+
+        <!-- 3-2. 선택한 분야의 세부 주제 고르기 -->
+        <div class="bg-slate-50 rounded-2xl p-4 sm:p-5 border border-slate-200 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <span class="text-sm font-extrabold text-slate-900">② 세부 실천 주제 고르기 (클릭하면 아래 구상 칸에 자동 입력돼요!)</span>
+            <span id="step3-selected-topic-badge" class="px-3 py-1 rounded-full bg-emerald-100 text-emerald-900 font-extrabold text-xs">선택됨: 급식 잔반과 음식물 쓰레기</span>
+          </div>
+          <div id="step3-subtopics-list" class="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+            <!-- JS로 선택된 카테고리의 3개 세부 주제 렌더링됨 -->
+          </div>
+        </div>
+
+        <!-- 3-3. 육하원칙(언제·어디서·무엇을·어떻게) 방법 구체화 워크시트 -->
+        <div class="bg-emerald-50/70 rounded-3xl p-5 sm:p-6 border border-emerald-200 space-y-4">
+          <div class="text-sm sm:text-base font-extrabold text-emerald-950">
+            ③ 나의 실천 방법 구체적으로 설계하기 (4단계 설계서로 자동 연결됩니다!)
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label for="plan-when-where" class="block text-xs sm:text-sm font-extrabold text-slate-800 mb-1">
+                📍 언제, 어디서 실천할까요?
+              </label>
+              <input
+                type="text"
+                id="plan-when-where"
+                placeholder="예: 매일 점심시간 학교 급식실과 우리 반 교실에서"
+                class="w-full rounded-xl border border-emerald-300 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+
+            <div>
+              <label for="plan-change-habit" class="block text-xs sm:text-sm font-extrabold text-slate-800 mb-1">
+                🔄 어떤 습관을 어떻게 바꿀까요?
+              </label>
+              <input
+                type="text"
+                id="plan-change-habit"
+                placeholder="예: 먹을 수 있는 만큼만 배식받고 국물까지 남기지 않기"
+                class="w-full rounded-xl border border-emerald-300 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label for="plan-helper-tool" class="block text-xs sm:text-sm font-extrabold text-slate-800 mb-1">
+                🛠️ 실천을 도와줄 규칙이나 도구는 무엇인가요?
+              </label>
+              <input
+                type="text"
+                id="plan-helper-tool"
+                placeholder="예: 식판 다 먹기 인증 스티커판과 짝꿍 서로 응원하기"
+                class="w-full rounded-xl border border-emerald-300 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+
+            <div>
+              <label for="plan-obstacle-fix" class="block text-xs sm:text-sm font-extrabold text-slate-800 mb-1">
+                💪 실천이 어려울 때는 어떻게 해결할까요?
+              </label>
+              <input
+                type="text"
+                id="plan-obstacle-fix"
+                placeholder="예: 싫어하는 반찬이 나오면 처음부터 한 숟가락만 조금 받아 도전하기"
+                class="w-full rounded-xl border border-emerald-300 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between">
+        <button
+          type="button"
+          onclick="switchTab(2)"
+          class="px-5 py-3 rounded-2xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-bold text-sm sm:text-base transition cursor-pointer"
+        >
+          ← 2단계: 나의 지구 체온계
+        </button>
+        <button
+          type="button"
+          onclick="applyStep3PlanAndGoStep4()"
+          class="px-6 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm sm:text-base shadow-md transition cursor-pointer"
+        >
+          구상한 내용으로 4단계 아이디어 완성하기 ➔
+        </button>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- 4단계: 나만의 감축 아이디어 완성 (Action Builder)                     -->
+    <!-- ===================================================================== -->
+    <section id="section-4" class="step-section hidden space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- 좌측: 아이디어 구체화 입력 폼 -->
+        <div class="lg:col-span-7 bg-white rounded-3xl border border-emerald-100 p-6 sm:p-8 shadow-sm space-y-5">
+          <div class="border-b border-slate-100 pb-4">
+            <span class="inline-block px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 font-extrabold text-xs mb-1">
+              4단계 · 탄소 감축 액션 빌더
+            </span>
+            <h2 class="font-title text-2xl text-slate-900">나만의 탄소발자국 줄이기 아이디어 설계서</h2>
+            <p class="text-xs sm:text-sm text-slate-600 mt-1">
+              3단계에서 고른 분야와 실천 방법을 바탕으로 한 달 감축량을 계산하고 학급 지도에 등록해 보세요!
+            </p>
+          </div>
+
+          <form id="idea-form" onsubmit="handleCreateIdea(event)" class="space-y-4">
+            <!-- 작성자 & 카테고리 -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label for="idea-author" class="block text-xs sm:text-sm font-extrabold text-slate-800 mb-1">
+                  작성자 (모둠명 또는 별명) <span class="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="idea-author"
+                  required
+                  placeholder="예: 6-1 초록지킴이 (김민준)"
+                  class="w-full rounded-2xl border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label for="idea-category" class="block text-xs sm:text-sm font-extrabold text-slate-800 mb-1">
+                  실천 분야 선택
+                </label>
+                <select
+                  id="idea-category"
+                  onchange="recalculateIdeaCarbon()"
+                  class="w-full rounded-2xl border border-slate-300 px-4 py-2.5 text-sm font-bold text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                >
+                  <option value="food">🍱 급식 · 식생활 분야</option>
+                  <option value="class">✏️ 교실 · 학용품 · 자원순환</option>
+                  <option value="move">🚲 등하교 · 이동수단</option>
+                  <option value="energy">💡 에너지 · 전기 절약</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- 아이디어 제목 -->
+            <div>
+              <label for="idea-title" class="block text-xs sm:text-sm font-extrabold text-slate-800 mb-1">
+                아이디어 한 줄 제목 <span class="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                id="idea-title"
+                required
+                placeholder="예: 우리 반 수요일은 '잔반 제로 데이' 운영하기!"
+                class="w-full rounded-2xl border border-slate-300 px-4 py-2.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+
+            <!-- 문장 완성형 스캐폴딩 (문제 발견 + 키워드 칩) -->
+            <div class="bg-slate-50 rounded-2xl p-4 border border-slate-200 space-y-2.5">
+              <label for="idea-problem" class="block text-xs sm:text-sm font-extrabold text-slate-800">
+                ① 발견한 문제 상황 <span class="text-rose-500">*</span>
+              </label>
+              <div class="flex flex-wrap gap-1.5">
+                <button type="button" onclick="appendChip('idea-problem', '급식실에서 먹지 않을 반찬까지 많이 받아 잔반이 쌓여요.')" class="px-2.5 py-1 rounded-full bg-white hover:bg-emerald-50 border border-slate-300 text-xs font-bold text-slate-700 cursor-pointer">+ 급식 잔반 문제</button>
+                <button type="button" onclick="appendChip('idea-problem', '교실 쓰레기통에 이면지와 페트병이 섞여서 버려져요.')" class="px-2.5 py-1 rounded-full bg-white hover:bg-emerald-50 border border-slate-300 text-xs font-bold text-slate-700 cursor-pointer">+ 교실 분리배출 문제</button>
+                <button type="button" onclick="appendChip('idea-problem', '쉬는 시간이나 체육 시간에 빈 교실 전등과 TV가 켜져 있어요.')" class="px-2.5 py-1 rounded-full bg-white hover:bg-emerald-50 border border-slate-300 text-xs font-bold text-slate-700 cursor-pointer">+ 빈 교실 대기전력</button>
+              </div>
+              <textarea
+                id="idea-problem"
+                rows="2"
+                required
+                placeholder="우리 학교/가정에서 어떤 행동 때문에 탄소발자국이 늘어나고 있나요?"
+                class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              ></textarea>
+            </div>
+
+            <!-- 해결 아이디어 -->
+            <div class="bg-emerald-50/70 rounded-2xl p-4 border border-emerald-200 space-y-2">
+              <label for="idea-solution" class="block text-xs sm:text-sm font-extrabold text-emerald-950">
+                ② 나의 해결 아이디어 <span class="text-rose-500">*</span>
+              </label>
+              <textarea
+                id="idea-solution"
+                rows="2"
+                required
+                placeholder="문제를 해결하기 위해 어떤 새로운 규칙이나 도구를 만들면 좋을까요?"
+                class="w-full rounded-xl border border-emerald-300 bg-white px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              ></textarea>
+            </div>
+
+            <!-- 3단계 실행 계획 (준비 - 실천 - 다짐·점검·공유) -->
+            <div class="space-y-2.5">
+              <div class="text-xs sm:text-sm font-extrabold text-slate-800">③ 구체적인 3단계 실천 로드맵</div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div class="bg-white rounded-2xl border border-slate-200 p-3">
+                  <div class="text-xs font-extrabold text-emerald-700 mb-1">1단계. 준비하기</div>
+                  <input
+                    type="text"
+                    id="idea-step1"
+                    required
+                    placeholder="예: 반찬 양 미리 조절하기"
+                    class="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div class="bg-white rounded-2xl border border-slate-200 p-3">
+                  <div class="text-xs font-extrabold text-teal-700 mb-1">2단계. 실천하기</div>
+                  <input
+                    type="text"
+                    id="idea-step2"
+                    required
+                    placeholder="예: 받은 음식 다 먹고 인증"
+                    class="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div class="bg-white rounded-2xl border border-slate-200 p-3">
+                  <div class="text-xs font-extrabold text-sky-700 mb-1">3단계. 다짐·점검·공유</div>
+                  <input
+                    type="text"
+                    id="idea-step3"
+                    required
+                    placeholder="예: 매일 체크표 기록 & 가족과 함께"
+                    class="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- 함께 실천할 인원(직접 입력) & 일주일 실천 횟수(주 1~7회) -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-teal-50/70 border border-teal-200 rounded-2xl p-4">
+              <div>
+                <label for="idea-participants" class="block text-xs sm:text-sm font-extrabold text-teal-950 mb-1">
+                  👥 함께 실천할 인원 (명)
+                </label>
+                <div class="flex items-center gap-2">
+                  <input
+                    type="number"
+                    id="idea-participants"
+                    min="1"
+                    max="1000"
+                    value="1"
+                    oninput="recalculateIdeaCarbon()"
+                    class="w-24 rounded-xl border border-teal-300 bg-white px-3 py-2 text-base font-extrabold text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  />
+                  <span class="text-sm font-bold text-slate-700">명</span>
+                  <div class="flex gap-1 ml-auto">
+                    <button type="button" onclick="setParticipants(1)" class="px-2 py-1 rounded-lg bg-white border border-teal-300 text-xs font-bold text-teal-900 hover:bg-teal-100 cursor-pointer">나(1)</button>
+                    <button type="button" onclick="setParticipants(4)" class="px-2 py-1 rounded-lg bg-white border border-teal-300 text-xs font-bold text-teal-900 hover:bg-teal-100 cursor-pointer">가족(4)</button>
+                    <button type="button" onclick="setParticipants(24)" class="px-2 py-1 rounded-lg bg-white border border-teal-300 text-xs font-bold text-teal-900 hover:bg-teal-100 cursor-pointer">우리반(24)</button>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div class="flex items-center justify-between mb-1">
+                  <label for="idea-frequency" class="text-xs sm:text-sm font-extrabold text-teal-950">
+                    📅 일주일 실천 횟수
+                  </label>
+                  <span id="idea-freq-label" class="px-2.5 py-0.5 rounded-full bg-teal-200 text-teal-950 font-extrabold text-xs">주 3회</span>
+                </div>
+                <input
+                  type="range"
+                  id="idea-frequency"
+                  min="1"
+                  max="7"
+                  value="3"
+                  oninput="recalculateIdeaCarbon()"
+                  class="w-full mt-1"
+                />
+                <div class="flex justify-between text-[11px] text-slate-500 font-bold mt-1">
+                  <span>주 1회</span>
+                  <span>주 4회</span>
+                  <span>주 7회(매일)</span>
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              class="w-full py-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-base sm:text-lg shadow-md transition cursor-pointer"
+            >
+              🌱 아이디어 완성하고 학급 탄소 지도에 등록하기!
+            </button>
+          </form>
+        </div>
+
+        <!-- 우측: 실시간 탄소 감축 효과 & 자연 성장 일러스트 비주얼라이저 -->
+        <div class="lg:col-span-5 bg-white rounded-3xl border border-emerald-100 p-6 shadow-sm flex flex-col justify-between text-center">
+          <div>
+            <span class="inline-block px-3 py-1 rounded-full bg-teal-100 text-teal-900 font-extrabold text-xs mb-1">
+              실시간 예상 효과 시뮬레이터
+            </span>
+            <h3 class="font-title text-2xl text-slate-900">이 아이디어를 한 달 실천하면?</h3>
+            <p class="text-xs text-slate-500 mt-1">실천 분야·인원·횟수에 따라 줄어드는 탄소가 자동 계산돼요!</p>
+          </div>
+
+          <!-- 자연 성장 SVG 일러스트 (새싹 -> 나무 -> 울창한 숲) -->
+          <div class="my-4 bg-gradient-to-b from-sky-100 via-sky-50 to-emerald-100 rounded-3xl p-5 border border-emerald-200 relative overflow-hidden">
+            <div id="forest-stage-badge" class="inline-block px-3 py-1 rounded-full bg-white/90 text-emerald-800 font-extrabold text-xs shadow-2xs mb-2">
+              🌱 작은 새싹 단계
+            </div>
+            <svg id="forest-svg" class="w-48 h-40 mx-auto" viewBox="0 0 220 170" fill="none">
+              <!-- 땅 -->
+              <ellipse cx="110" cy="150" rx="95" ry="16" fill="#86EFAC"/>
+              <!-- 새싹 (기본 표시) -->
+              <g id="stage-sprout">
+                <path d="M110 148V112" stroke="#15803D" stroke-width="6" stroke-linecap="round"/>
+                <path d="M110 122C94 108 80 114 82 126C84 136 100 134 110 122Z" fill="#22C55E"/>
+                <path d="M110 116C126 102 140 108 138 120C136 130 120 128 110 116Z" fill="#4ADE80"/>
+              </g>
+              <!-- 큰 나무 (중간 규모) -->
+              <g id="stage-tree" class="hidden">
+                <rect x="101" y="96" width="18" height="54" rx="6" fill="#92400E"/>
+                <circle cx="110" cy="76" r="38" fill="#22C55E"/>
+                <circle cx="84" cy="90" r="26" fill="#16A34A"/>
+                <circle cx="136" cy="90" r="26" fill="#16A34A"/>
+                <circle cx="110" cy="54" r="26" fill="#4ADE80"/>
+              </g>
+              <!-- 울창한 숲 (대규모) -->
+              <g id="stage-forest" class="hidden">
+                <path d="M35 85C65 30 155 30 185 85" stroke="#FDE047" stroke-width="6" stroke-linecap="round" opacity="0.75"/>
+                <rect x="52" y="108" width="12" height="40" rx="4" fill="#92400E"/>
+                <circle cx="58" cy="92" r="26" fill="#16A34A"/>
+                <rect x="156" y="108" width="12" height="40" rx="4" fill="#92400E"/>
+                <circle cx="162" cy="92" r="26" fill="#16A34A"/>
+                <rect x="100" y="92" width="20" height="58" rx="6" fill="#78350F"/>
+                <circle cx="110" cy="72" r="42" fill="#22C55E"/>
+                <circle cx="82" cy="86" r="28" fill="#15803D"/>
+                <circle cx="138" cy="86" r="28" fill="#15803D"/>
+              </g>
+            </svg>
+          </div>
+
+          <!-- 자동 계산 수치 카드 -->
+          <div class="space-y-3">
+            <div class="bg-emerald-50 border-2 border-emerald-300 rounded-2xl p-4">
+              <div class="text-xs font-extrabold text-emerald-800">한 달(4주) 예상 탄소 감축량</div>
+              <div id="calc-monthly-co2" class="text-3xl font-extrabold text-emerald-700 mt-1">3.6 kg CO₂</div>
+              <div id="calc-formula-desc" class="text-[11px] text-emerald-900 mt-1">
+                1명 × 주 3회 × 4주 × 회당 0.30kg 감축
+              </div>
+            </div>
+
+            <div class="bg-teal-50 border border-teal-200 rounded-2xl p-3 flex items-center justify-between px-5">
+              <span class="text-xs sm:text-sm font-extrabold text-teal-950">🌲 어린 소나무 심기 효과</span>
+              <span id="calc-tree-count" class="text-base sm:text-lg font-extrabold text-teal-700">약 0.5 그루</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between">
+        <button
+          type="button"
+          onclick="switchTab(3)"
+          class="px-5 py-3 rounded-2xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-bold text-sm sm:text-base transition cursor-pointer"
+        >
+          ← 3단계: 실천 분야·방법 구상
+        </button>
+        <button
+          type="button"
+          onclick="switchTab(5)"
+          class="px-6 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm sm:text-base shadow-md transition cursor-pointer"
+        >
+          5단계: 학급 탄소 지도 보러 가기 ➔
+        </button>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- 5단계: 학급 탄소 지도 & 실시간 공유 월 (Class Wall - 실시간 동기화)     -->
+    <!-- ===================================================================== -->
+    <section id="section-5" class="step-section hidden space-y-6">
+      <!-- 학급 누적 대시보드 -->
+      <div class="bg-gradient-to-r from-emerald-700 via-teal-700 to-emerald-800 rounded-3xl p-6 sm:p-8 text-white shadow-md">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 border-b border-white/20">
+          <div>
+            <div class="flex flex-wrap items-center gap-2 mb-1">
+              <span class="px-3 py-0.5 rounded-full bg-white/20 text-xs font-extrabold">5단계 · 실시간 학급 공유 보드</span>
+              <span id="wall-room-indicator" class="px-3 py-0.5 rounded-full bg-amber-300 text-amber-950 text-xs font-extrabold">
+                개인 모드 (학급 입장코드를 입력하면 실시간으로 합쳐져요!)
+              </span>
+            </div>
+            <h2 class="font-title text-2xl sm:text-3xl">우리 반 탄소발자국 줄이기 아이디어 지도</h2>
+            <p class="text-emerald-100 text-xs sm:text-sm mt-1">
+              같은 학급 입장코드를 입력한 친구들의 아이디어가 실시간으로 모이고, 카드 수정과 응원 스티커도 함께 공유됩니다.
+            </p>
+          </div>
+          <button
+            type="button"
+            onclick="openClassRoomModal()"
+            class="px-4 py-3 rounded-2xl bg-amber-300 hover:bg-amber-200 text-amber-950 font-extrabold text-sm shrink-0 shadow-sm transition cursor-pointer"
+          >
+            🏫 입장코드 입력 / 참여자 확인
+          </button>
+        </div>
+
+        <!-- 3대 학급 통계 지표 -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-5">
+          <div class="bg-white/15 backdrop-blur-xs rounded-2xl p-4 border border-white/20">
+            <div class="text-xs text-emerald-100 font-bold">등록된 실천 아이디어</div>
+            <div id="class-total-ideas" class="text-2xl sm:text-3xl font-extrabold mt-1">0개</div>
+          </div>
+          <div class="bg-white/15 backdrop-blur-xs rounded-2xl p-4 border border-white/20">
+            <div class="text-xs text-emerald-100 font-bold">우리 반 월간 총 탄소 감축량</div>
+            <div id="class-total-co2" class="text-2xl sm:text-3xl font-extrabold text-amber-300 mt-1">0.0 kg CO₂</div>
+          </div>
+          <div class="bg-white/15 backdrop-blur-xs rounded-2xl p-4 border border-white/20">
+            <div class="text-xs text-emerald-100 font-bold">친구들이 보낸 응원 스티커</div>
+            <div id="class-total-reactions" class="text-2xl sm:text-3xl font-extrabold mt-1">0개</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 필터 및 검색 바 -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+        <div class="flex flex-wrap gap-1.5">
+          <button type="button" onclick="setFilterCategory('all')" id="filter-all" class="px-3.5 py-2 rounded-xl bg-emerald-600 text-white font-extrabold text-xs sm:text-sm cursor-pointer">전체 보기</button>
+          <button type="button" onclick="setFilterCategory('food')" id="filter-food" class="px-3.5 py-2 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 font-bold text-xs sm:text-sm cursor-pointer">🍱 급식</button>
+          <button type="button" onclick="setFilterCategory('class')" id="filter-class" class="px-3.5 py-2 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 font-bold text-xs sm:text-sm cursor-pointer">✏️ 교실</button>
+          <button type="button" onclick="setFilterCategory('move')" id="filter-move" class="px-3.5 py-2 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 font-bold text-xs sm:text-sm cursor-pointer">🚲 이동</button>
+          <button type="button" onclick="setFilterCategory('energy')" id="filter-energy" class="px-3.5 py-2 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 font-bold text-xs sm:text-sm cursor-pointer">💡 에너지</button>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <input
+            type="text"
+            id="search-idea-input"
+            oninput="renderIdeas()"
+            placeholder="제목이나 작성자 검색..."
+            class="w-full sm:w-56 rounded-xl border border-slate-300 px-3.5 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          />
+          <button
+            type="button"
+            onclick="switchTab(4)"
+            class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs sm:text-sm shrink-0 cursor-pointer"
+          >
+            + 새 카드 쓰기
+          </button>
+        </div>
+      </div>
+
+      <!-- 아이디어 카드 그리드 -->
+      <div id="ideas-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <!-- JS로 렌더링됨 -->
+      </div>
+    </section>
+  </main>
+
+  <!-- ==================== 모달 1: 1단계 탄소발자국 지식 팝업 ==================== -->
+  <div id="modal-info" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-emerald-200 space-y-4">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <h3 id="modal-info-title" class="font-title text-2xl text-slate-900">영역 상세 정보</h3>
+        <button type="button" onclick="closeInfoModal()" class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 font-bold text-slate-600 cursor-pointer">✕</button>
+      </div>
+      <div id="modal-info-body" class="space-y-3 text-sm text-slate-700 leading-relaxed"></div>
+      <div class="pt-2 flex justify-end">
+        <button type="button" onclick="closeInfoModal()" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm cursor-pointer">확인했어요!</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 모달 2: 학급 입장코드 실시간 공유 연결 ==================== -->
+  <div id="modal-classroom" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-amber-200 space-y-4">
+      <div class="flex items-start justify-between gap-2 pb-3 border-b border-slate-100">
+        <div>
+          <span class="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 font-extrabold text-xs">5단계 학급 탄소 지도 실시간 공유</span>
+          <h3 class="font-title text-2xl text-slate-900 mt-1">학급 입장코드 연결</h3>
+        </div>
+        <button type="button" onclick="closeClassRoomModal()" class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 font-bold text-slate-600 cursor-pointer">✕</button>
+      </div>
+
+      <div class="bg-slate-50 rounded-2xl border border-slate-200 p-3.5 text-xs sm:text-sm space-y-1.5">
+        <div class="flex items-center justify-between">
+          <span class="font-bold text-slate-600">현재 연결 상태:</span>
+          <span id="modal-room-status-text" class="font-extrabold text-slate-800">연결 안 됨 (개인 모드)</span>
+        </div>
+        <p class="text-xs text-slate-500 leading-relaxed">
+          선생님과 학생들이 똑같은 입장코드(예: <strong class="text-slate-700">6학년1반</strong>)를 입력하면 유선 PC와 무선 태블릿·노트북이 모두 한 방에서 실시간으로 합쳐집니다.
+        </p>
+      </div>
+
+      <form onsubmit="handleJoinRoomSubmit(event)" class="space-y-3">
+        <div>
+          <label for="input-room-code" class="block text-xs sm:text-sm font-extrabold text-slate-800 mb-1">
+            우리 반 입장코드 입력
+          </label>
+          <div class="flex gap-2">
+            <input
+              type="text"
+              id="input-room-code"
+              maxlength="20"
+              placeholder="예: 6학년1반"
+              class="flex-1 rounded-xl border-2 border-slate-300 px-3.5 py-2.5 text-base font-extrabold text-slate-900 focus:outline-none focus:border-emerald-600"
+            />
+            <button
+              type="submit"
+              id="btn-join-room"
+              class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm shrink-0 cursor-pointer"
+            >
+              입장하기
+            </button>
+          </div>
+          <p id="room-error-msg" class="hidden mt-1.5 text-xs font-bold text-rose-600"></p>
+        </div>
+      </form>
+
+      <div class="flex items-center justify-between pt-2 border-t border-slate-100">
+        <button
+          type="button"
+          id="btn-leave-room"
+          onclick="leaveClassRoom()"
+          class="hidden px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs cursor-pointer"
+        >
+          연결 끊기
+        </button>
+        <button
+          type="button"
+          onclick="closeClassRoomModal()"
+          class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs sm:text-sm ml-auto cursor-pointer"
+        >
+          닫기
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 모달 3: 학급 탄소 지도 카드 실시간 수정 ==================== -->
+  <div id="modal-edit-idea" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl border border-emerald-200 space-y-4 my-auto">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div>
+          <span class="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-extrabold text-xs">실시간 카드 수정</span>
+          <h3 class="font-title text-2xl text-slate-900 mt-1">아이디어 카드 내용 고치기</h3>
+        </div>
+        <button type="button" onclick="closeEditIdeaModal()" class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 font-bold text-slate-600 cursor-pointer">✕</button>
+      </div>
+
+      <form onsubmit="saveEditedIdea(event)" class="space-y-3.5">
+        <input type="hidden" id="edit-idea-id" />
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label for="edit-idea-author" class="block text-xs font-extrabold text-slate-800 mb-1">작성자</label>
+            <input type="text" id="edit-idea-author" required class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label for="edit-idea-category" class="block text-xs font-extrabold text-slate-800 mb-1">실천 분야</label>
+            <select id="edit-idea-category" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm font-bold bg-white">
+              <option value="food">🍱 급식 · 식생활 분야</option>
+              <option value="class">✏️ 교실 · 학용품 · 자원순환</option>
+              <option value="move">🚲 등하교 · 이동수단</option>
+              <option value="energy">💡 에너지 · 전기 절약</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label for="edit-idea-title" class="block text-xs font-extrabold text-slate-800 mb-1">아이디어 제목</label>
+          <input type="text" id="edit-idea-title" required class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm font-bold" />
+        </div>
+
+        <div>
+          <label for="edit-idea-problem" class="block text-xs font-extrabold text-slate-800 mb-1">발견한 문제</label>
+          <textarea id="edit-idea-problem" rows="2" required class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"></textarea>
+        </div>
+
+        <div>
+          <label for="edit-idea-solution" class="block text-xs font-extrabold text-slate-800 mb-1">해결 아이디어</label>
+          <textarea id="edit-idea-solution" rows="2" required class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"></textarea>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+          <div>
+            <label for="edit-idea-step1" class="block text-xs font-extrabold text-emerald-700 mb-1">1단계 준비</label>
+            <input type="text" id="edit-idea-step1" required class="w-full rounded-xl border border-slate-300 px-2.5 py-2 text-xs" />
+          </div>
+          <div>
+            <label for="edit-idea-step2" class="block text-xs font-extrabold text-teal-700 mb-1">2단계 실천</label>
+            <input type="text" id="edit-idea-step2" required class="w-full rounded-xl border border-slate-300 px-2.5 py-2 text-xs" />
+          </div>
+          <div>
+            <label for="edit-idea-step3" class="block text-xs font-extrabold text-sky-700 mb-1">3단계 다짐·점검·공유</label>
+            <input type="text" id="edit-idea-step3" required class="w-full rounded-xl border border-slate-300 px-2.5 py-2 text-xs" />
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
+          <button type="button" onclick="closeEditIdeaModal()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm cursor-pointer">취소</button>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm cursor-pointer">수정 저장 & 실시간 반영</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== 모달 4: 카드 삭제 확인 다이얼로그 ==================== -->
+  <div id="modal-delete" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+      <h3 class="font-title text-xl text-slate-900">이 아이디어 카드를 삭제할까요?</h3>
+      <p class="text-xs sm:text-sm text-slate-600">
+        학급 방에 연결된 상태라면 친구들의 학급 탄소 지도에서도 함께 삭제됩니다.
+      </p>
+      <div class="flex justify-end gap-2 pt-2">
+        <button type="button" onclick="closeDeleteModal()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm cursor-pointer">취소</button>
+        <button type="button" id="btn-confirm-delete" class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-sm cursor-pointer">삭제하기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 하단 토스트 알림 ==================== -->
+  <div id="toast-box" class="hidden fixed bottom-5 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-2xl bg-slate-900 text-white font-bold text-xs sm:text-sm shadow-xl border border-slate-700 max-w-[92vw] text-center">
+    <span id="toast-msg"></span>
+  </div>
+
+  <!-- ==================== 애플리케이션 스크립트 ==================== -->
+  <script>
+    // 1. 기본 상수 및 로컬 데이터 초기화
+    const STORAGE_KEY = 'g6_carbon_action_wall_v4';
+    const CATEGORY_META = {
+      food: { label: '🍱 급식·식생활', unitCo2: 0.45, color: 'amber' },
+      class: { label: '✏️ 교실·자원순환', unitCo2: 0.25, color: 'emerald' },
+      move: { label: '🚲 등하교·이동', unitCo2: 0.85, color: 'sky' },
+      energy: { label: '💡 에너지·전기', unitCo2: 0.35, color: 'purple' }
+    };
+
+    // 1단계(탐색)와 2단계(진단)가 1:1로 연결되는 12가지 생활 속 숨은 온실가스 데이터
+    const CARBON_TOPICS_12 = [
+      {
+        id: 't1_leftover',
+        num: '01',
+        group: '🍱 급식 · 식생활',
+        badgeClass: 'bg-amber-100 text-amber-900',
+        cardClass: 'from-amber-50 to-orange-50/70 hover:from-amber-100 hover:to-orange-100 border-amber-200',
+        sliderClass: 'bg-amber-50/60 border-amber-200',
+        pillClass: 'bg-amber-200 text-amber-950',
+        icon: '🍽️',
+        title: '급식 잔반과 음식물 쓰레기',
+        shortDesc: '먹지 않고 남긴 급식이 버려지고 처리될 때 나오는 메탄·이산화탄소',
+        detailFact: '음식을 재배하고 조리한 뒤 남은 음식물 쓰레기를 수거·처리하는 모든 과정에서 많은 온실가스가 배출됩니다. 급식 한 끼를 남기지 않으면 약 <strong>0.45kg의 CO₂</strong>를 줄일 수 있어요!',
+        detailTips: [
+          '배식받을 때 먹을 수 있는 양만큼만 처음부터 알맞게 받기',
+          '편식하지 않고 채소와 국도 골고루 먹기',
+          '우리 반 수요일 "잔반 제로 데이"에 적극 참여하기'
+        ],
+        question: '1. 일주일에 급식이나 집밥 반찬을 남기는 횟수는?',
+        min: 0,
+        max: 7,
+        defaultVal: 2,
+        leftLabel: '0회 (잔반 제로!)',
+        midLabel: '3~4회',
+        rightLabel: '7회 (매일 남김)',
+        formatVal: (v) => `주 ${v}회`,
+        co2Factor: 0.45
+      },
+      {
+        id: 't2_meat',
+        num: '02',
+        group: '🍱 급식 · 식생활',
+        badgeClass: 'bg-amber-100 text-amber-900',
+        cardClass: 'from-amber-50 to-orange-50/70 hover:from-amber-100 hover:to-orange-100 border-amber-200',
+        sliderClass: 'bg-amber-50/60 border-amber-200',
+        sliderPillClass: 'bg-amber-200 text-amber-950',
+        pillClass: 'bg-amber-200 text-amber-950',
+        icon: '🥩',
+        title: '육류·가공육 위주 식습관',
+        shortDesc: '가축을 기르고 사료를 생산할 때 발생하는 온실가스와 채소 식단의 차이',
+        detailFact: '소·돼지 등 가축을 기르는 과정에서는 메탄가스가 발생하고 사료 재배를 위해 많은 숲과 물이 필요합니다. 일주일에 하루만 채소·콩 위주 식단을 선택해도 큰 탄소를 줄일 수 있어요!',
+        detailTips: [
+          '햄·소시지 같은 가공육 간식 대신 제철 과일·견과류 먹기',
+          '급식에 나오는 나물·두부·콩 반찬 맛있게 먹기',
+          '가족과 함께 한 달에 두 번 "저탄소 채식 한 끼" 실천하기'
+        ],
+        question: '2. 채소보다 고기·햄 위주로 식사하거나 간식을 먹는 횟수는?',
+        min: 0,
+        max: 7,
+        defaultVal: 3,
+        leftLabel: '0회 (채소와 균형 식단)',
+        midLabel: '3~4회',
+        rightLabel: '7회 (매일 육류 위주)',
+        formatVal: (v) => `주 ${v}회`,
+        co2Factor: 0.55
+      },
+      {
+        id: 't3_localfood',
+        num: '03',
+        group: '🍱 급식 · 식생활',
+        badgeClass: 'bg-amber-100 text-amber-900',
+        cardClass: 'from-amber-50 to-orange-50/70 hover:from-amber-100 hover:to-orange-100 border-amber-200',
+        sliderClass: 'bg-amber-50/60 border-amber-200',
+        pillClass: 'bg-amber-200 text-amber-950',
+        icon: '🍎',
+        title: '수입 먹거리와 푸드 마일리지',
+        shortDesc: '멀리 비행기·배를 타고 온 외국산 과일·간식의 운송 탄소발자국',
+        detailFact: '먹거리가 생산지에서 우리 식탁까지 이동한 거리를 <strong>푸드 마일리지</strong>라고 합니다. 멀리서 비행기나 냉동 배로 운반된 수입 식품보다 우리 고장 제철 농산물이 훨씬 탄소를 적게 배출해요.',
+        detailTips: [
+          '장볼 때 원산지를 확인하고 우리 고장·국내산 제철 과일 고르기',
+          '과대 포장된 수입 과자보다 로컬푸드 직매장 간식 이용하기',
+          '계절에 맞는 제철 채소·과일 이름 알아보기'
+        ],
+        question: '3. 우리 고장 제철 먹거리 대신 수입 과일·수입 간식을 먹는 횟수는?',
+        min: 0,
+        max: 7,
+        defaultVal: 2,
+        leftLabel: '0회 (제철·로컬푸드 애용)',
+        midLabel: '3~4회',
+        rightLabel: '7회 (거의 매일 수입 간식)',
+        formatVal: (v) => `주 ${v}회`,
+        co2Factor: 0.35
+      },
+      {
+        id: 't4_plastic',
+        num: '04',
+        group: '✏️ 교실 · 자원순환',
+        badgeClass: 'bg-emerald-100 text-emerald-900',
+        cardClass: 'from-emerald-50 to-teal-50/70 hover:from-emerald-100 hover:to-teal-100 border-emerald-200',
+        sliderClass: 'bg-emerald-50/60 border-emerald-200',
+        pillClass: 'bg-emerald-200 text-emerald-950',
+        icon: '🥤',
+        title: '일회용 플라스틱 컵과 페트병',
+        shortDesc: '잠깐 쓰고 버리는 플라스틱 용기와 비닐봉지가 만드는 탄소발자국',
+        detailFact: '플라스틱은 석유로 만들며, 생산부터 소각·매립까지 많은 온실가스를 배출합니다. 500mL 페트병 하나를 만들고 버릴 때 약 <strong>60~80g의 CO₂</strong>가 나와요.',
+        detailTips: [
+          '학교와 외출할 때 나만의 개인 물병(텀블러) 챙겨 다니기',
+          '편의점이나 문구점에서 비닐봉지 대신 책가방·에코백에 담기',
+          '일회용 빨대나 나무젓가락 거절하기'
+        ],
+        question: '4. 일주일에 일회용 컵·페트병·비닐봉지를 사용하는 개수는?',
+        min: 0,
+        max: 10,
+        defaultVal: 3,
+        leftLabel: '0개 (텀블러·에코백)',
+        midLabel: '5개',
+        rightLabel: '10개 이상',
+        formatVal: (v) => `주 ${v}개`,
+        co2Factor: 0.3
+      },
+      {
+        id: 't5_paper',
+        num: '05',
+        group: '✏️ 교실 · 자원순환',
+        badgeClass: 'bg-emerald-100 text-emerald-900',
+        cardClass: 'from-emerald-50 to-teal-50/70 hover:from-emerald-100 hover:to-teal-100 border-emerald-200',
+        sliderClass: 'bg-emerald-50/60 border-emerald-200',
+        pillClass: 'bg-emerald-200 text-emerald-950',
+        icon: '📄',
+        title: '교실 종이·이면지·휴지 낭비',
+        shortDesc: '나무를 베어 종이를 만들고 가공할 때 발생하는 온실가스와 숲 파괴',
+        detailFact: 'A4 용지 1장을 만들 때 약 <strong>10g의 탄소</strong>와 물 10L가 필요합니다. 교실에서 한 면만 쓴 학습지를 이면지로 다시 쓰면 탄소를 흡수하는 숲을 지킬 수 있어요!',
+        detailTips: [
+          '교실 이면지함을 만들어 연습장이나 메모지로 다시 쓰기',
+          '손 씻은 뒤 종이타월 여러 장 대신 개인 손수건 사용하기',
+          '공책의 빈 칸을 남기지 않고 끝까지 알뜰하게 쓰기'
+        ],
+        question: '5. 이면지·손수건을 쓰지 않고 새 종이나 휴지를 낭비하는 정도는?',
+        min: 0,
+        max: 4,
+        defaultVal: 2,
+        leftLabel: '1단계 (이면지·손수건 애용)',
+        midLabel: '3단계 (보통)',
+        rightLabel: '5단계 (자주 새 종이·휴지 사용)',
+        formatVal: (v) => ['1단계 (매우 잘 아낌)', '2단계 (잘 아끼는 편)', '3단계 (보통)', '4단계 (조금 낭비함)', '5단계 (많이 낭비함)'][v],
+        co2Factor: 0.35
+      },
+      {
+        id: 't6_recycle',
+        num: '06',
+        group: '✏️ 교실 · 자원순환',
+        badgeClass: 'bg-emerald-100 text-emerald-900',
+        cardClass: 'from-emerald-50 to-teal-50/70 hover:from-emerald-100 hover:to-teal-100 border-emerald-200',
+        sliderClass: 'bg-emerald-50/60 border-emerald-200',
+        pillClass: 'bg-emerald-200 text-emerald-950',
+        icon: '♻️',
+        title: '올바른 분리배출과 자원순환',
+        shortDesc: '재활용 쓰레기가 일반 쓰레기와 섞여 소각될 때 늘어나는 탄소 배출',
+        detailFact: '페트병의 비닐 라벨을 떼고 내용물을 비워 배출하면 새로운 옷이나 가방으로 재탄생합니다. 반대로 이물질이 묻어 섞여 버려지면 소각장에서 태워지며 많은 탄소를 내뿜어요.',
+        detailTips: [
+          '비우고(내용물), 헹구고(물로 씻기), 분리하고(라벨·뚜껑), 섞지 않기!',
+          '우유갑은 물로 헹군 뒤 펼쳐서 종이팩 전용함에 모으기',
+          '교실 분리배출함 앞에 올바른 배출 안내표 붙이기'
+        ],
+        question: '6. 라벨 제거·내용물 비우기 등 올바른 분리배출을 놓치는 정도는?',
+        min: 0,
+        max: 4,
+        defaultVal: 2,
+        leftLabel: '1단계 (항상 정확히 분리)',
+        midLabel: '3단계 (보통)',
+        rightLabel: '5단계 (귀찮아서 한꺼번에 버림)',
+        formatVal: (v) => ['1단계 (완벽 분리배출)', '2단계 (잘 지키는 편)', '3단계 (보통)', '4단계 (가끔 섞어 버림)', '5단계 (거의 분리 안 함)'][v],
+        co2Factor: 0.35
+      },
+      {
+        id: 't7_car',
+        num: '07',
+        group: '🚲 등하교 · 일상 이동',
+        badgeClass: 'bg-sky-100 text-sky-900',
+        cardClass: 'from-sky-50 to-blue-50/70 hover:from-sky-100 hover:to-blue-100 border-sky-200',
+        sliderClass: 'bg-sky-50/60 border-sky-200',
+        pillClass: 'bg-sky-200 text-sky-950',
+        icon: '🚗',
+        title: '가까운 거리 자가용 이용',
+        shortDesc: '화석연료를 태워 달리는 자동차 배기가스와 걷기·자전거의 차이',
+        detailFact: '휘발유 자가용으로 4km 거리를 이동할 때 약 <strong>0.85kg의 CO₂</strong>가 배출됩니다. 걸어갈 수 있는 가까운 학교나 학원은 친구와 함께 걸어가면 탄소 배출이 0kg이 돼요!',
+        detailTips: [
+          '학교와 가까운 학원은 걷거나 안전모를 쓰고 자전거로 이동하기',
+          '가족 나들이 갈 때 버스·지하철 등 대중교통 이용하기',
+          '불필요한 자동차 공회전 멈추기 가족에게 알리기'
+        ],
+        question: '7. 걸어갈 수 있는 가까운 거리를 자가용으로 이동하는 횟수는?',
+        min: 0,
+        max: 7,
+        defaultVal: 2,
+        leftLabel: '0회 (걷기·자전거·버스)',
+        midLabel: '3~4회',
+        rightLabel: '7회 (매일 자가용)',
+        formatVal: (v) => `주 ${v}회`,
+        co2Factor: 1.25
+      },
+      {
+        id: 't8_elevator',
+        num: '08',
+        group: '🚲 등하교 · 일상 이동',
+        badgeClass: 'bg-sky-100 text-sky-900',
+        cardClass: 'from-sky-50 to-blue-50/70 hover:from-sky-100 hover:to-blue-100 border-sky-200',
+        sliderClass: 'bg-sky-50/60 border-sky-200',
+        pillClass: 'bg-sky-200 text-sky-950',
+        icon: '🪜',
+        title: '저층 엘리베이터와 에스컬레이터',
+        shortDesc: '무거운 승강기를 움직이는 데 쓰이는 전기에너지와 계단 걷기 효과',
+        detailFact: '엘리베이터가 한 번 오르내릴 때마다 전기가 소모됩니다. 1~4층 정도의 낮은 층은 계단을 이용하면 전기 탄소도 줄이고 다리 근력도 튼튼해지는 일석이조 효과가 있어요!',
+        detailTips: [
+          '아파트·상가에서 1~4층 이동할 때는 계단 이용하기',
+          '엘리베이터 버튼을 실수로 잘못 눌렀을 때 취소 기능 활용하기',
+          '하교할 때 내려가는 길부터 계단 걷기 실천하기'
+        ],
+        question: '8. 1~4층 정도의 낮은 층을 이동할 때 엘리베이터를 타는 정도는?',
+        min: 0,
+        max: 4,
+        defaultVal: 2,
+        leftLabel: '1단계 (항상 계단 이용)',
+        midLabel: '3단계 (보통)',
+        rightLabel: '5단계 (1층도 엘리베이터)',
+        formatVal: (v) => ['1단계 (항상 계단 이용)', '2단계 (주로 계단 이용)', '3단계 (보통)', '4단계 (자주 승강기 탐)', '5단계 (항상 승강기 탐)'][v],
+        co2Factor: 0.3
+      },
+      {
+        id: 't9_standby',
+        num: '09',
+        group: '💡 에너지 · 물 · 디지털',
+        badgeClass: 'bg-purple-100 text-purple-900',
+        cardClass: 'from-purple-50 to-indigo-50/70 hover:from-purple-100 hover:to-indigo-100 border-purple-200',
+        sliderClass: 'bg-purple-50/60 border-purple-200',
+        pillClass: 'bg-purple-200 text-purple-950',
+        icon: '🔌',
+        title: '빈 방 전등과 대기전력 낭비',
+        shortDesc: '끄지 않은 교실 전등과 플러그가 꽂힌 전자제품이 먹는 숨은 전기',
+        detailFact: '전자제품을 껐더라도 플러그가 꽂혀 있으면 전기를 계속 소비하는데 이를 <strong>대기전력</strong>이라고 합니다. 가정 전체 전기의 약 6~10%가 대기전력으로 새어 나가요!',
+        detailTips: [
+          '체육·음악 시간 등 교실을 비울 때 전등과 전자칠판 끄기',
+          '다 쓴 스마트폰 충전기 플러그 뽑아두기',
+          '멀티탭 개별 스위치를 끄는 "에너지 지킴이" 활동하기'
+        ],
+        question: '9. 안 쓰는 교실·방 전등 끄기와 대기전력 차단을 놓치는 정도는?',
+        min: 0,
+        max: 4,
+        defaultVal: 2,
+        leftLabel: '1단계 (항상 완벽히 끄기)',
+        midLabel: '3단계 (보통)',
+        rightLabel: '5단계 (거의 끄지 않음)',
+        formatVal: (v) => ['1단계 (항상 소등·차단)', '2단계 (잘 끄는 편)', '3단계 (보통)', '4단계 (가끔 켜둠)', '5단계 (거의 끄지 않음)'][v],
+        co2Factor: 0.5
+      },
+      {
+        id: 't10_hvac',
+        num: '10',
+        group: '💡 에너지 · 물 · 디지털',
+        badgeClass: 'bg-purple-100 text-purple-900',
+        cardClass: 'from-purple-50 to-indigo-50/70 hover:from-purple-100 hover:to-indigo-100 border-purple-200',
+        sliderClass: 'bg-purple-50/60 border-purple-200',
+        pillClass: 'bg-purple-200 text-purple-950',
+        icon: '🌡️',
+        title: '냉난방 적정 온도와 문 열어두기',
+        shortDesc: '에어컨·히터 과도한 가동과 창문·출입문 개방으로 새는 냉난방 에너지',
+        detailFact: '냉난방 온도를 1°C만 조절해도 전력 소비를 약 <strong>7%</strong>나 아낄 수 있습니다. 또한 에어컨이나 난방기를 켠 채 창문이나 복도 문을 열어두면 에너지가 밖으로 다 빠져나가요.',
+        detailTips: [
+          '여름철 실내 적정 온도 26°C 이상, 겨울철 20°C 이하 유지하기',
+          '겨울엔 내복·가디건 겹쳐 입고, 여름엔 시원한 반팔 차림하기',
+          '냉난방기 가동 중에는 출입문과 창문 꼭 닫아두기'
+        ],
+        question: '10. 적정 실내 온도를 지키지 않거나 냉난방 중 문을 열어두는 정도는?',
+        min: 0,
+        max: 4,
+        defaultVal: 2,
+        leftLabel: '1단계 (적정온도·문닫기 철저)',
+        midLabel: '3단계 (보통)',
+        rightLabel: '5단계 (너무 춥거나 덥게 틀어둠)',
+        formatVal: (v) => ['1단계 (적정온도 철저)', '2단계 (잘 지키는 편)', '3단계 (보통)', '4단계 (조금 과하게 틈)', '5단계 (매우 과하게 틈)'][v],
+        co2Factor: 0.55
+      },
+      {
+        id: 't11_digital',
+        num: '11',
+        group: '💡 에너지 · 물 · 디지털',
+        badgeClass: 'bg-purple-100 text-purple-900',
+        cardClass: 'from-purple-50 to-indigo-50/70 hover:from-purple-100 hover:to-indigo-100 border-purple-200',
+        sliderClass: 'bg-purple-50/60 border-purple-200',
+        pillClass: 'bg-purple-200 text-purple-950',
+        icon: '📱',
+        title: '디지털 탄소발자국 (영상·이메일)',
+        shortDesc: '동영상 스트리밍과 데이터센터 서버를 식히는 데 쓰이는 막대한 전기',
+        detailFact: '스마트폰으로 동영상을 1시간 시청할 때 데이터센터 서버와 통신망에서 약 <strong>36g의 CO₂</strong>가 발생합니다. 불필요한 영상 자동재생을 끄고 화면 밝기를 낮추는 것도 탄소 절약이에요!',
+        detailTips: [
+          '보지 않는 동영상·게임 화면은 바로 끄고 야외 놀이하기',
+          '스마트폰·태블릿 화면 밝기를 적당히 낮추어 배터리 아끼기',
+          '스팸 메일함과 불필요한 클라우드 파일 정리하기'
+        ],
+        question: '11. 하루 평균 스마트폰·동영상 시청 등 디지털 기기 사용 시간은?',
+        min: 0,
+        max: 6,
+        defaultVal: 2,
+        leftLabel: '0~1시간 (꼭 필요할 때만)',
+        midLabel: '3시간',
+        rightLabel: '6시간 이상 (디지털 탄소↑)',
+        formatVal: (v) => (v === 0 ? '1시간 미만' : `하루 ${v}시간`),
+        co2Factor: 0.45
+      },
+      {
+        id: 't12_water',
+        num: '12',
+        group: '💡 에너지 · 물 · 디지털',
+        badgeClass: 'bg-purple-100 text-purple-900',
+        cardClass: 'from-purple-50 to-indigo-50/70 hover:from-purple-100 hover:to-indigo-100 border-purple-200',
+        sliderClass: 'bg-purple-50/60 border-purple-200',
+        pillClass: 'bg-purple-200 text-purple-950',
+        icon: '💧',
+        title: '수돗물 낭비와 온수 사용',
+        shortDesc: '수돗물을 정수·공급하고 물을 데우는 보일러 가동 시 나오는 온실가스',
+        detailFact: '깨끗한 수돗물을 정수해 각 가정과 학교로 보내는 과정과, 따뜻한 물을 데우는 보일러에서도 많은 에너지와 탄소가 발생합니다. 양치컵만 써도 물 5L 이상을 아낄 수 있어요!',
+        detailTips: [
+          '양치할 때 수도꼭지를 잠그고 반드시 양치컵 사용하기',
+          '비누칠할 때 샤워기 물 잠그고 샤워 시간 2분 줄이기',
+          '수도꼭지를 끝까지 잠가 물방울이 새지 않게 확인하기'
+        ],
+        question: '12. 양치컵 미사용 및 긴 샤워 등 물·온수를 낭비하는 정도는?',
+        min: 0,
+        max: 4,
+        defaultVal: 2,
+        leftLabel: '1단계 (양치컵·짧은 샤워)',
+        midLabel: '3단계 (보통)',
+        rightLabel: '5단계 (물을 계속 틀어둠)',
+        formatVal: (v) => ['1단계 (물 절약 완벽)', '2단계 (잘 아끼는 편)', '3단계 (보통)', '4단계 (조금 많이 씀)', '5단계 (물을 계속 틀어둠)'][v],
+        co2Factor: 0.35
+      }
+    ];
+
+    const INFO_DATA = Object.fromEntries(
+      CARBON_TOPICS_12.map((t) => [
+        t.id,
+        {
+          title: `${t.icon} [${t.num}] ${t.title}`,
+          html: `
+            <div class="bg-emerald-50 p-4 rounded-2xl border border-emerald-200">
+              <p class="font-extrabold text-emerald-950 mb-1">💡 숨은 온실가스 과학 원리</p>
+              <p>${t.detailFact}</p>
+            </div>
+            <div>
+              <p class="font-extrabold text-slate-800 mb-1.5">🌱 우리가 바로 실천할 수 있는 행동</p>
+              <ul class="list-disc pl-5 space-y-1.5 text-slate-700">
+                ${t.detailTips.map((tip) => `<li>${tip}</li>`).join('')}
+              </ul>
+            </div>
+          `
+        }
+      ])
+    );
+
+    const DEFAULT_IDEAS = [
+      {
+        id: 'sample_1',
+        author: '예시 · 초록별 모둠',
+        category: 'food',
+        title: '우리 반 수요일은 잔반 제로 데이!',
+        problem: '급식실에서 먹지 않을 반찬까지 많이 받아 버려지는 음식물 쓰레기가 많아요.',
+        solution: '배식 전에 먹을 만큼만 덜어 달라고 말하고, 다 먹은 친구는 학급 체크판에 스티커를 붙여요.',
+        step1: '급식 당번이 배식 전 양 조절 안내하기',
+        step2: '받은 음식 남김없이 맛있게 다 먹기',
+        step3: '매일 식판 점검표에 기록하고 집에서도 가족과 함께 실천하기',
+        co2Saved: 21.6,
+        likes: 4,
+        willDo: 3,
+        creative: 2,
+        updatedAt: 1700000001000
+      },
+      {
+        id: 'sample_2',
+        author: '예시 · 에너지 수호대',
+        category: 'energy',
+        title: '이동 수업 전 교실 소등 지킴이 운영',
+        problem: '체육이나 과학실 이동 수업 시간에 빈 교실 불이 켜져 있는 경우가 많아요.',
+        solution: '분단별로 에너지 지킴이를 정해 마지막에 나가는 친구가 전등과 전자칠판 전원을 확인해요.',
+        step1: '교실 문 옆에 소등 확인 체크표 붙이기',
+        step2: '이동 수업마다 전등·선풍기 전원 끄기',
+        step3: '주간 점검표를 확인하고 가족에게도 대기전력 차단 공유하기',
+        co2Saved: 16.8,
+        likes: 5,
+        willDo: 4,
+        creative: 3,
+        updatedAt: 1700000002000
+      }
+    ];
+
+    function loadIdeasFromStorage() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch (e) {}
+      return JSON.parse(JSON.stringify(DEFAULT_IDEAS));
+    }
+
+    function saveIdeasToStorage() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(window.ideas || []));
+      } catch (e) {}
+    }
+
+    window.ideas = loadIdeasFromStorage();
+    let currentFilter = 'all';
+    const deletedIdeaIds = new Set();
+    const clientSessionId =
+      typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID()
+        : 'sess_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+
+    // 2. 유선·무선(교내 망 분리) 100% 통합 실시간 공유 엔진 (표준 443포트 WSS + 다중 폴백 브로커)
+    let activeRoomCode = '';
+    let connectionTransport = 'none'; // 'none' | 'relay'
+    let relayClient = null;
+    let relayPresenceTimer = null;
+    let relaySyncPullTimer = null;
+    let localBroadcast = null;
+    const activePeersMap = new Map(); // sessionId -> lastSeenTimestamp
+    let connectedMemberCount = 1;
+
+    function toSafePeerRoomId(code) {
+      const normalizedCode = String(code || '').trim().toLowerCase();
+      const bytes = new TextEncoder().encode(normalizedCode);
+      const hex = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+      return `kr-elem-g6-carbon-wall-v3-${hex}`;
+    }
+
+    function waitForMqttLibrary(timeoutMs = 6000) {
+      return new Promise(resolve => {
+        if (typeof window.mqtt !== 'undefined' && typeof window.mqtt.connect === 'function') {
+          resolve(true);
+          return;
+        }
+        const start = Date.now();
+        const timer = setInterval(() => {
+          if (typeof window.mqtt !== 'undefined' && typeof window.mqtt.connect === 'function') {
+            clearInterval(timer);
+            resolve(true);
+          } else if (Date.now() - start >= timeoutMs) {
+            clearInterval(timer);
+            resolve(false);
+          }
+        }, 120);
+      });
+    }
+
+    function cleanupPeerConnection() {
+      clearInterval(relayPresenceTimer);
+      clearInterval(relaySyncPullTimer);
+      relayPresenceTimer = null;
+      relaySyncPullTimer = null;
+
+      if (relayClient) {
+        try {
+          relayClient.end(true);
+        } catch (e) {}
+        relayClient = null;
+      }
+
+      if (localBroadcast) {
+        try {
+          localBroadcast.close();
+        } catch (e) {}
+        localBroadcast = null;
+      }
+
+      activePeersMap.clear();
+      connectionTransport = 'none';
+      connectedMemberCount = 1;
+    }
+
+    function refreshActiveMemberCount() {
+      const now = Date.now();
+      activePeersMap.set(clientSessionId, now);
+      for (const [sid, ts] of activePeersMap.entries()) {
+        if (now - ts > 30000) {
+          activePeersMap.delete(sid);
+        }
+      }
+      connectedMemberCount = Math.max(1, activePeersMap.size);
+      updateRoomStatusUI();
+    }
+
+    function publishRelayMessage(roomCode, payloadObj) {
+      if (localBroadcast) {
+        try {
+          localBroadcast.postMessage(payloadObj);
+        } catch (e) {}
+      }
+      if (!relayClient || !relayClient.connected) return;
+      const topic = `kr/elem/g6/carbon/wall/v3/${toSafePeerRoomId(roomCode)}`;
+      try {
+        relayClient.publish(topic, JSON.stringify(payloadObj), { qos: 1 });
+      } catch (e) {}
+    }
+
+    function syncWallToRoom() {
+      saveIdeasToStorage();
+      if (!activeRoomCode) return;
+
+      const payload = {
+        type: 'SYNC_WALL',
+        ideas: window.ideas,
+        deletedIds: Array.from(deletedIdeaIds),
+        sender: clientSessionId
+      };
+
+      publishRelayMessage(activeRoomCode, payload);
+    }
+
+    function mergeRemoteIdeas(remoteIdeas, remoteDeletedIds = [], notify = false) {
+      if (!Array.isArray(remoteIdeas)) return;
+      let changed = false;
+
+      if (Array.isArray(remoteDeletedIds)) {
+        remoteDeletedIds.forEach(id => {
+          if (!deletedIdeaIds.has(id)) {
+            deletedIdeaIds.add(id);
+            changed = true;
+          }
+        });
+      }
+
+      const beforeLen = window.ideas.length;
+      window.ideas = window.ideas.filter(item => !deletedIdeaIds.has(item.id));
+      if (window.ideas.length !== beforeLen) changed = true;
+
+      const localMap = new Map(window.ideas.map(item => [item.id, item]));
+
+      remoteIdeas.forEach(remote => {
+        if (!remote || !remote.id || deletedIdeaIds.has(remote.id)) return;
+        const existing = localMap.get(remote.id);
+        if (!existing) {
+          localMap.set(remote.id, remote);
+          changed = true;
+        } else {
+          const remoteTime = remote.updatedAt || 0;
+          const localTime = existing.updatedAt || 0;
+          const mergedReactions = {
+            likes: Math.max(existing.likes || 0, remote.likes || 0),
+            willDo: Math.max(existing.willDo || 0, remote.willDo || 0),
+            creative: Math.max(existing.creative || 0, remote.creative || 0)
+          };
+
+          if (
+            remoteTime > localTime ||
+            mergedReactions.likes !== (existing.likes || 0) ||
+            mergedReactions.willDo !== (existing.willDo || 0) ||
+            mergedReactions.creative !== (existing.creative || 0)
+          ) {
+            const base = remoteTime >= localTime ? remote : existing;
+            localMap.set(remote.id, { ...base, ...mergedReactions });
+            changed = true;
+          }
+        }
+      });
+
+      window.ideas = Array.from(localMap.values());
+
+      if (changed) {
+        saveIdeasToStorage();
+        updateClassStats();
+        renderIdeas();
+        if (notify) {
+          showToast('🔄 학급 탄소 지도가 실시간으로 업데이트되었습니다!');
+        }
+      }
+    }
+
+    function handleIncomingRoomPayload(sanitizedCode, data) {
+      if (!data || data.sender === clientSessionId) return;
+
+      if (data.sender) {
+        if (data.type === 'LEAVE_RELAY') {
+          activePeersMap.delete(data.sender);
+        } else {
+          activePeersMap.set(data.sender, Date.now());
+        }
+        refreshActiveMemberCount();
+      }
+
+      if (data.type === 'HELLO_RELAY' || data.type === 'REQUEST_SYNC') {
+        if (data.ideas) mergeRemoteIdeas(data.ideas, data.deletedIds || [], true);
+        publishRelayMessage(sanitizedCode, {
+          type: 'WELCOME_RELAY',
+          ideas: window.ideas,
+          deletedIds: Array.from(deletedIdeaIds),
+          sender: clientSessionId
+        });
+      } else if (data.type === 'WELCOME_RELAY' || data.type === 'SYNC_WALL') {
+        mergeRemoteIdeas(data.ideas, data.deletedIds || [], data.type === 'SYNC_WALL');
+      }
+    }
+
+    // 학교 유선 방화벽에서도 차단되지 않는 표준 443포트 WSS 연결 (EMQX 공식 표준 443 엔드포인트 최우선)
+    async function connectWifiRelayRoom(sanitizedCode) {
+      const mqttReady = await waitForMqttLibrary(6000);
+      if (!mqttReady) {
+        throw new Error('실시간 연결 도구를 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.');
+      }
+
+      cleanupPeerConnection();
+      const topic = `kr/elem/g6/carbon/wall/v3/${toSafePeerRoomId(sanitizedCode)}`;
+
+      if (typeof BroadcastChannel !== 'undefined') {
+        try {
+          localBroadcast = new BroadcastChannel(topic);
+          localBroadcast.onmessage = ev => handleIncomingRoomPayload(sanitizedCode, ev.data);
+        } catch (e) {}
+      }
+
+      // 1순위로 표준 443 포트(일반 HTTPS 웹포트)를 사용하여 학교 유선 방화벽 통과 보장
+      const brokers = [
+        'wss://broker.emqx.io:443/mqtt',
+        'wss://broker.hivemq.com:8884/mqtt',
+        'wss://broker.emqx.io:8084/mqtt'
+      ];
+
+      for (const brokerUrl of brokers) {
+        try {
+          const connected = await new Promise((resolve, reject) => {
+            const client = window.mqtt.connect(brokerUrl, {
+              clientId: `g6_${clientSessionId.slice(0, 12)}_${Math.random().toString(36).slice(2, 6)}`,
+              clean: true,
+              connectTimeout: 5000,
+              reconnectPeriod: 1500
+            });
+
+            const guard = setTimeout(() => {
+              try { client.end(true); } catch (e) {}
+              reject(new Error('timeout'));
+            }, 5500);
+
+            client.on('connect', () => {
+              clearTimeout(guard);
+              client.subscribe(topic, { qos: 1 }, err => {
+                if (err) {
+                  try { client.end(true); } catch (e) {}
+                  reject(err);
+                  return;
+                }
+
+                relayClient = client;
+                connectionTransport = 'relay';
+                activeRoomCode = sanitizedCode;
+                activePeersMap.clear();
+                activePeersMap.set(clientSessionId, Date.now());
+                connectedMemberCount = 1;
+
+                client.on('message', (_, rawMsg) => {
+                  try {
+                    const data = JSON.parse(rawMsg.toString());
+                    handleIncomingRoomPayload(sanitizedCode, data);
+                  } catch (e) {}
+                });
+
+                const sendHello = () => {
+                  publishRelayMessage(sanitizedCode, {
+                    type: 'HELLO_RELAY',
+                    ideas: window.ideas,
+                    deletedIds: Array.from(deletedIdeaIds),
+                    sender: clientSessionId
+                  });
+                };
+
+                client.on('reconnect', sendHello);
+
+                // 입장 직후 0초, 1.2초, 3초 간격으로 확실하게 동기화 신호 전송
+                sendHello();
+                setTimeout(sendHello, 1200);
+                setTimeout(sendHello, 3000);
+
+                relayPresenceTimer = setInterval(() => {
+                  if (activeRoomCode === sanitizedCode) {
+                    refreshActiveMemberCount();
+                    publishRelayMessage(sanitizedCode, {
+                      type: 'PING_RELAY',
+                      sender: clientSessionId
+                    });
+                  }
+                }, 6000);
+
+                // 혹시 놓친 변경사항이 없도록 주기적 상태 요청
+                relaySyncPullTimer = setInterval(() => {
+                  if (activeRoomCode === sanitizedCode) {
+                    publishRelayMessage(sanitizedCode, {
+                      type: 'REQUEST_SYNC',
+                      ideas: window.ideas,
+                      deletedIds: Array.from(deletedIdeaIds),
+                      sender: clientSessionId
+                    });
+                  }
+                }, 12000);
+
+                updateRoomStatusUI();
+                resolve(true);
+              });
+            });
+
+            client.on('error', () => {
+              clearTimeout(guard);
+              try { client.end(true); } catch (e) {}
+              reject(new Error('broker_error'));
+            });
+          });
+
+          if (connected) return 'relay';
+        } catch (e) {}
+      }
+
+      throw new Error('학교 네트워크에서 실시간 서버에 접속할 수 없습니다.');
+    }
+
+    function updateRoomStatusUI() {
+      const badge = document.getElementById('room-status-badge');
+      const btnText = document.getElementById('room-btn-text');
+      const openBtn = document.getElementById('open-room-btn');
+      const wallIndicator = document.getElementById('wall-room-indicator');
+      const modalStatus = document.getElementById('modal-room-status-text');
+      const leaveBtn = document.getElementById('btn-leave-room');
+
+      if (activeRoomCode) {
+        const safeCode = escapeHtml(activeRoomCode);
+        if (badge) {
+          badge.className = 'text-xs font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300 flex items-center gap-1.5';
+          badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-600 animate-pulse inline-block"></span><span>학급방 '${safeCode}' 실시간 연결 · 참여 ${connectedMemberCount}명</span>`;
+        }
+        if (btnText) btnText.textContent = `${activeRoomCode} (참여 ${connectedMemberCount}명)`;
+        if (openBtn) {
+          openBtn.className = 'px-4 py-2.5 rounded-2xl bg-emerald-50 hover:bg-emerald-100 text-emerald-950 border-2 border-emerald-400 font-extrabold text-xs sm:text-sm flex items-center gap-2 shadow-2xs transition cursor-pointer';
+        }
+        if (wallIndicator) {
+          wallIndicator.className = 'px-3 py-0.5 rounded-full bg-emerald-300 text-emerald-950 text-xs font-extrabold';
+          wallIndicator.textContent = `🏫 '${activeRoomCode}' 실시간 공유 중 · 참여 ${connectedMemberCount}명`;
+        }
+        if (modalStatus) {
+          modalStatus.textContent = `'${activeRoomCode}' 연결됨 (현재 참여 ${connectedMemberCount}명)`;
+          modalStatus.className = 'font-extrabold text-emerald-700';
+        }
+        if (leaveBtn) leaveBtn.classList.remove('hidden');
+      } else {
+        if (badge) {
+          badge.className = 'text-xs font-extrabold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-300 flex items-center gap-1.5';
+          badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-slate-400 inline-block"></span><span>개인 학습 모드 (5단계 연결 전)</span>`;
+        }
+        if (btnText) btnText.textContent = '학급 입장코드 연결';
+        if (openBtn) {
+          openBtn.className = 'px-4 py-2.5 rounded-2xl bg-amber-50 hover:bg-amber-100 text-amber-950 border-2 border-amber-300 font-extrabold text-xs sm:text-sm flex items-center gap-2 shadow-2xs transition cursor-pointer';
+        }
+        if (wallIndicator) {
+          wallIndicator.className = 'px-3 py-0.5 rounded-full bg-amber-300 text-amber-950 text-xs font-extrabold';
+          wallIndicator.textContent = '개인 모드 (학급 입장코드를 입력하면 실시간으로 합쳐져요!)';
+        }
+        if (modalStatus) {
+          modalStatus.textContent = '연결 안 됨 (개인 모드)';
+          modalStatus.className = 'font-extrabold text-slate-800';
+        }
+        if (leaveBtn) leaveBtn.classList.add('hidden');
+      }
+    }
+
+    function openClassRoomModal() {
+      const errEl = document.getElementById('room-error-msg');
+      const inputEl = document.getElementById('input-room-code');
+      if (errEl) errEl.classList.add('hidden');
+      if (inputEl && activeRoomCode) inputEl.value = activeRoomCode;
+      updateRoomStatusUI();
+      document.getElementById('modal-classroom').classList.remove('hidden');
+    }
+
+    function closeClassRoomModal() {
+      document.getElementById('modal-classroom').classList.add('hidden');
+    }
+
+    async function handleJoinRoomSubmit(event) {
+      event.preventDefault();
+      const inputEl = document.getElementById('input-room-code');
+      const errEl = document.getElementById('room-error-msg');
+      const joinBtn = document.getElementById('btn-join-room');
+      if (!inputEl || !errEl) return;
+
+      errEl.classList.add('hidden');
+      const sanitized = inputEl.value.trim().replace(/[\/\\.#$\[\]\s]+/g, '_');
+      if (sanitized.length < 2) {
+        errEl.textContent = '학급 입장코드를 2글자 이상 입력해 주세요.';
+        errEl.classList.remove('hidden');
+        return;
+      }
+
+      if (joinBtn) {
+        joinBtn.disabled = true;
+        joinBtn.textContent = '연결 중...';
+      }
+
+      try {
+        await connectWifiRelayRoom(sanitized);
+        closeClassRoomModal();
+        showToast(`🏫 학급방 '${sanitized}'에 실시간으로 연결되었습니다!`);
+      } catch (err) {
+        errEl.textContent = err && err.message ? err.message : '연결에 실패했습니다. 잠시 후 다시 시도해 주세요.';
+        errEl.classList.remove('hidden');
+      } finally {
+        if (joinBtn) {
+          joinBtn.disabled = false;
+          joinBtn.textContent = '입장하기';
+        }
+      }
+    }
+
+    function leaveClassRoom() {
+      if (activeRoomCode) {
+        publishRelayMessage(activeRoomCode, { type: 'LEAVE_RELAY', sender: clientSessionId });
+      }
+      const prev = activeRoomCode;
+      cleanupPeerConnection();
+      activeRoomCode = '';
+      updateRoomStatusUI();
+      closeClassRoomModal();
+      showToast(`학급방 '${prev}' 연결을 끊었습니다.`);
+    }
+
+    function renderStep1AndStep2Topics() {
+      const step1Grid = document.getElementById('step1-cards-grid');
+      const step2Container = document.getElementById('step2-sliders-container');
+
+      if (step1Grid) {
+        step1Grid.innerHTML = CARBON_TOPICS_12.map(
+          (t) => `
+            <button
+              type="button"
+              onclick="openInfoModal('${t.id}')"
+              class="p-4 rounded-2xl bg-gradient-to-br ${t.cardClass} border text-left transition shadow-2xs flex flex-col justify-between cursor-pointer group"
+            >
+              <div>
+                <div class="flex items-center justify-between gap-1 mb-2">
+                  <span class="px-2 py-0.5 rounded-full ${t.badgeClass} font-extrabold text-[11px]">${t.group}</span>
+                  <span class="text-xs font-extrabold text-slate-400">#${t.num}</span>
+                </div>
+                <div class="text-2xl mb-1.5 group-hover:scale-110 transition-transform inline-block">${t.icon}</div>
+                <h3 class="font-extrabold text-sm sm:text-base text-slate-900 leading-snug">${t.title}</h3>
+                <p class="text-xs text-slate-600 mt-1 leading-relaxed">${t.shortDesc}</p>
+              </div>
+              <div class="mt-3 pt-2 border-t border-black/5 text-xs font-extrabold text-emerald-800 flex items-center justify-between">
+                <span>자세히 알아보기</span>
+                <span>➔</span>
+              </div>
+            </button>
+          `
+        ).join('');
+      }
+
+      if (step2Container) {
+        step2Container.innerHTML = CARBON_TOPICS_12.map(
+          (t) => `
+            <div class="p-4 rounded-2xl border ${t.sliderClass} space-y-2">
+              <div class="flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2">
+                  <span class="text-lg">${t.icon}</span>
+                  <div>
+                    <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-full ${t.badgeClass}">${t.group}</span>
+                    <div class="font-extrabold text-xs sm:text-sm text-slate-900 mt-0.5">${t.question}</div>
+                  </div>
+                </div>
+                <span id="label-${t.id}" class="px-2.5 py-1 rounded-full ${t.pillClass} font-extrabold text-xs shrink-0">
+                  ${t.formatVal(t.defaultVal)}
+                </span>
+              </div>
+              <input
+                type="range"
+                id="input-${t.id}"
+                min="${t.min}"
+                max="${t.max}"
+                value="${t.defaultVal}"
+                oninput="updateDiagnosis()"
+                class="w-full"
+              />
+              <div class="flex justify-between text-[11px] text-slate-500 font-bold">
+                <span>${t.leftLabel}</span>
+                <span>${t.midLabel}</span>
+                <span>${t.rightLabel}</span>
+              </div>
+            </div>
+          `
+        ).join('');
+      }
+    }
+
+    let selectedPracticeCat = 'food';
+    let selectedSubtopicId = 't1_leftover';
+
+    const CAT_TOPIC_MAP = {
+      food: ['t1_leftover', 't2_meat', 't3_localfood'],
+      class: ['t4_plastic', 't5_paper', 't6_recycle'],
+      move: ['t7_car', 't8_elevator'],
+      energy: ['t9_standby', 't10_hvac', 't11_digital', 't12_water']
+    };
+
+    function selectPracticeCategory(cat) {
+      selectedPracticeCat = cat;
+      ['food', 'class', 'move', 'energy'].forEach((key) => {
+        const card = document.getElementById(`cat-pick-${key}`);
+        if (!card) return;
+        card.className =
+          key === cat
+            ? 'p-4 rounded-2xl border-2 border-emerald-600 bg-emerald-50 text-left transition cursor-pointer shadow-2xs'
+            : 'p-4 rounded-2xl border-2 border-slate-200 bg-white hover:bg-slate-50 text-left transition cursor-pointer';
+      });
+
+      const topicIds = CAT_TOPIC_MAP[cat] || [];
+      if (topicIds.length > 0 && !topicIds.includes(selectedSubtopicId)) {
+        selectedSubtopicId = topicIds[0];
+      }
+      renderStep3Subtopics();
+    }
+
+    function renderStep3Subtopics() {
+      const listEl = document.getElementById('step3-subtopics-list');
+      const badgeEl = document.getElementById('step3-selected-topic-badge');
+      if (!listEl) return;
+
+      const topicIds = CAT_TOPIC_MAP[selectedPracticeCat] || [];
+      const subtopics = topicIds
+        .map((id) => CARBON_TOPICS_12.find((t) => t.id === id))
+        .filter(Boolean);
+
+      const currentTopic = subtopics.find((t) => t.id === selectedSubtopicId) || subtopics[0];
+      if (currentTopic && badgeEl) {
+        badgeEl.textContent = `선택됨: ${currentTopic.icon} ${currentTopic.title}`;
+      }
+
+      listEl.innerHTML = subtopics
+        .map((t) => {
+          const isSelected = t.id === selectedSubtopicId;
+          const sliderEl = document.getElementById(`input-${t.id}`);
+          const userVal = sliderEl ? Number(sliderEl.value) : t.defaultVal;
+          const isHigh = userVal >= Math.ceil(t.max * 0.6);
+
+          return `
+            <button
+              type="button"
+              onclick="pickSubtopic('${t.id}')"
+              class="p-3.5 rounded-2xl border-2 text-left transition cursor-pointer flex flex-col justify-between ${
+                isSelected
+                  ? 'border-emerald-600 bg-white shadow-xs'
+                  : 'border-slate-200 bg-white/70 hover:bg-white'
+              }"
+            >
+              <div>
+                <div class="flex items-center justify-between gap-1 mb-1">
+                  <span class="text-lg">${t.icon}</span>
+                  ${
+                    isHigh
+                      ? '<span class="px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 font-extrabold text-[10px]">2단계 진단 주의!</span>'
+                      : '<span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-bold text-[10px]">#' + t.num + '</span>'
+                  }
+                </div>
+                <div class="font-extrabold text-xs sm:text-sm text-slate-900">${t.title}</div>
+                <p class="text-[11px] text-slate-500 mt-1">${t.shortDesc}</p>
+              </div>
+              <div class="mt-2 pt-1.5 border-t border-slate-100 text-[11px] font-extrabold ${
+                isSelected ? 'text-emerald-700' : 'text-slate-400'
+              }">
+                ${isSelected ? '✓ 현재 선택된 주제' : '눌러서 이 주제 선택'}
+              </div>
+            </button>
+          `;
+        })
+        .join('');
+    }
+
+    function pickSubtopic(topicId) {
+      selectedSubtopicId = topicId;
+      renderStep3Subtopics();
+      const topic = CARBON_TOPICS_12.find((t) => t.id === topicId);
+      if (topic) {
+        const habitEl = document.getElementById('plan-change-habit');
+        if (habitEl && !habitEl.value.trim()) {
+          habitEl.value = topic.detailTips[0] || '';
+        }
+      }
+    }
+
+    function refreshStep3RecommendationAlert() {
+      const alertEl = document.getElementById('step3-diagnosis-alert');
+      if (!alertEl) return;
+
+      let highestTopic = CARBON_TOPICS_12[0];
+      let highestRatio = -1;
+
+      CARBON_TOPICS_12.forEach((t) => {
+        const el = document.getElementById(`input-${t.id}`);
+        const val = el ? Number(el.value) : t.defaultVal;
+        const ratio = t.max > 0 ? val / t.max : 0;
+        if (ratio > highestRatio) {
+          highestRatio = ratio;
+          highestTopic = t;
+        }
+      });
+
+      if (highestTopic) {
+        alertEl.textContent = `💡 2단계 진단 추천: '${highestTopic.icon} ${highestTopic.title}'부터 줄여볼까요?`;
+      }
+    }
+
+    function applyStep3PlanAndGoStep4() {
+      const topic = CARBON_TOPICS_12.find((t) => t.id === selectedSubtopicId) || CARBON_TOPICS_12[0];
+      const whenWhere = (document.getElementById('plan-when-where').value || '').trim();
+      const changeHabit = (document.getElementById('plan-change-habit').value || '').trim();
+      const helperTool = (document.getElementById('plan-helper-tool').value || '').trim();
+      const obstacleFix = (document.getElementById('plan-obstacle-fix').value || '').trim();
+
+      const catSelect = document.getElementById('idea-category');
+      if (catSelect) catSelect.value = selectedPracticeCat;
+
+      const titleEl = document.getElementById('idea-title');
+      if (titleEl && !titleEl.value.trim()) {
+        titleEl.value = `${topic.icon} ${topic.title} 줄이기 실천 프로젝트!`;
+      }
+
+      const problemEl = document.getElementById('idea-problem');
+      if (problemEl && !problemEl.value.trim()) {
+        problemEl.value = `${whenWhere ? whenWhere + ' ' : ''}${topic.shortDesc} 때문에 온실가스가 늘어나고 있어요.`;
+      }
+
+      const solutionEl = document.getElementById('idea-solution');
+      if (solutionEl && !solutionEl.value.trim()) {
+        const parts = [];
+        if (whenWhere) parts.push(`${whenWhere}`);
+        if (changeHabit) parts.push(`${changeHabit}`);
+        if (helperTool) parts.push(`(${helperTool} 활용)`);
+        solutionEl.value = parts.length > 0 ? parts.join(' ') : topic.detailTips[0];
+      }
+
+      const step1El = document.getElementById('idea-step1');
+      if (step1El && !step1El.value.trim() && helperTool) {
+        step1El.value = helperTool;
+      }
+
+      const step2El = document.getElementById('idea-step2');
+      if (step2El && !step2El.value.trim() && changeHabit) {
+        step2El.value = changeHabit;
+      }
+
+      const step3El = document.getElementById('idea-step3');
+      if (step3El && !step3El.value.trim() && obstacleFix) {
+        step3El.value = obstacleFix;
+      }
+
+      recalculateIdeaCarbon();
+      switchTab(4);
+      showToast('✨ 3단계에서 구상한 실천 분야와 방법이 4단계 설계서에 반영되었습니다!');
+    }
+
+    function switchTab(stepNum) {
+      for (let i = 1; i <= 5; i++) {
+        const section = document.getElementById(`section-${i}`);
+        const navBtn = document.getElementById(`nav-step-${i}`);
+        const isCurrent = i === stepNum;
+
+        if (section) section.classList.toggle('hidden', !isCurrent);
+        if (navBtn) {
+          const badge = navBtn.querySelector('span');
+          if (isCurrent) {
+            navBtn.className = 'p-3.5 rounded-2xl border-2 text-left transition flex items-center gap-3 bg-emerald-600 text-white border-emerald-600 shadow-md cursor-pointer';
+            if (badge) badge.className = 'w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center font-extrabold text-sm shrink-0';
+          } else {
+            navBtn.className = 'p-3.5 rounded-2xl border-2 text-left transition flex items-center gap-3 bg-white text-slate-700 border-slate-200 hover:bg-emerald-50 cursor-pointer';
+            if (badge) badge.className = 'w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center font-extrabold text-sm shrink-0';
+          }
+        }
+      }
+
+      if (stepNum === 3) {
+        refreshStep3RecommendationAlert();
+        renderStep3Subtopics();
+      } else if (stepNum === 5) {
+        updateClassStats();
+        renderIdeas();
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function openInfoModal(key) {
+      const data = INFO_DATA[key];
+      if (!data) return;
+      document.getElementById('modal-info-title').textContent = data.title;
+      document.getElementById('modal-info-body').innerHTML = data.html;
+      document.getElementById('modal-info').classList.remove('hidden');
+    }
+
+    function closeInfoModal() {
+      document.getElementById('modal-info').classList.add('hidden');
+    }
+
+    // 4. 2단계 지구 체온계 진단 로직 (1단계와 1:1 연결된 12가지 주제 통합 계산)
+    let currentEarthTemp = 36.9;
+
+    function updateDiagnosis() {
+      let rawWeeklyCo2 = 0;
+
+      CARBON_TOPICS_12.forEach((t) => {
+        const inputEl = document.getElementById(`input-${t.id}`);
+        const labelEl = document.getElementById(`label-${t.id}`);
+        const val = inputEl ? Number(inputEl.value) : t.defaultVal;
+        if (labelEl) {
+          labelEl.textContent = t.formatVal(val);
+        }
+        rawWeeklyCo2 += val * t.co2Factor;
+      });
+
+      const weeklyCo2 = +rawWeeklyCo2.toFixed(1);
+      const temp = +(36.5 + Math.min(2.0, weeklyCo2 * 0.045)).toFixed(1);
+      const trees = +(weeklyCo2 / 6.6).toFixed(1);
+
+      currentEarthTemp = temp;
+
+      document.getElementById('stat-earth-temp').textContent = `${temp.toFixed(1)}°C`;
+      document.getElementById('stat-weekly-co2').textContent = `${weeklyCo2} kg`;
+      document.getElementById('stat-trees-needed').textContent = `${trees} 그루`;
+
+      const thermoFill = document.getElementById('thermo-fill');
+      const thermoBulb = document.getElementById('thermo-bulb');
+      const tempEl = document.getElementById('stat-earth-temp');
+      const mouthEl = document.getElementById('earth-mouth');
+      const sweatEl = document.getElementById('earth-sweat');
+      const bubbleEl = document.getElementById('earth-speech-bubble');
+
+      const pct = Math.min(100, Math.max(15, ((temp - 36.5) / 2.0) * 100));
+      thermoFill.style.height = `${pct}%`;
+
+      if (temp <= 37.0) {
+        thermoFill.className = 'w-full rounded-full bg-emerald-500 transition-all duration-300';
+        thermoBulb.className = 'w-11 h-11 -mt-2 rounded-full bg-emerald-500 border-4 border-white shadow-sm flex items-center justify-center text-white font-extrabold text-[11px]';
+        tempEl.className = 'text-lg font-extrabold text-emerald-600 mt-0.5';
+        mouthEl.setAttribute('d', 'M82 114C90 128 110 128 118 114');
+        sweatEl.classList.add('hidden');
+        bubbleEl.textContent = '"와! 12가지 생활 습관 점수가 정말 훌륭해! 지금처럼 멋진 습관을 계속 지켜줘!"';
+      } else if (temp <= 37.7) {
+        thermoFill.className = 'w-full rounded-full bg-amber-500 transition-all duration-300';
+        thermoBulb.className = 'w-11 h-11 -mt-2 rounded-full bg-amber-500 border-4 border-white shadow-sm flex items-center justify-center text-white font-extrabold text-[11px]';
+        tempEl.className = 'text-lg font-extrabold text-amber-600 mt-0.5';
+        mouthEl.setAttribute('d', 'M84 120H116');
+        sweatEl.classList.add('hidden');
+        bubbleEl.textContent = '"음... 조금씩 열이 나기 시작했어. 12가지 중 한두 가지만 줄여도 금방 시원해질 거야!"';
+      } else {
+        thermoFill.className = 'w-full rounded-full bg-rose-500 transition-all duration-300';
+        thermoBulb.className = 'w-11 h-11 -mt-2 rounded-full bg-rose-500 border-4 border-white shadow-sm flex items-center justify-center text-white font-extrabold text-[11px]';
+        tempEl.className = 'text-lg font-extrabold text-rose-600 mt-0.5';
+        mouthEl.setAttribute('d', 'M84 126C92 114 108 114 116 126');
+        sweatEl.classList.remove('hidden');
+        bubbleEl.textContent = '"으악, 너무 더워서 땀이 나! 3단계에서 나를 도와줄 아이디어를 만들어줘!"';
+      }
+    }
+
+    function pokeEarth() {
+      const btn = document.getElementById('earth-avatar-btn');
+      const bubble = document.getElementById('earth-speech-bubble');
+      btn.classList.remove('earth-poke');
+      void btn.offsetWidth;
+      btn.classList.add('earth-poke');
+
+      const messages =
+        currentEarthTemp <= 37.0
+          ? ['"고마워! 너 덕분에 북극곰도 웃고 있어!"', '"최고의 기후 수호자야!"']
+          : currentEarthTemp <= 37.7
+          ? ['"급식 잔반이나 일회용 컵만 줄여도 체온이 뚝 떨어져!"', '"우리 같이 3단계에서 해결책을 만들어 보자!"']
+          : ['"열이 펄펄 나! 걷기와 전등 끄기부터 도와줘!"', '"너의 작은 실천이 지구를 살릴 수 있어!"'];
+
+      bubble.textContent = messages[Math.floor(Math.random() * messages.length)];
+    }
+
+    // 5. 3단계 아이디어 구체화 & 탄소 감축 자동 계산기
+    function appendChip(targetId, text) {
+      const el = document.getElementById(targetId);
+      if (!el) return;
+      el.value = el.value.trim() ? `${el.value.trim()} ${text}` : text;
+      el.focus();
+    }
+
+    function setParticipants(num) {
+      const el = document.getElementById('idea-participants');
+      if (el) {
+        el.value = num;
+        recalculateIdeaCarbon();
+      }
+    }
+
+    function recalculateIdeaCarbon() {
+      const cat = document.getElementById('idea-category').value;
+      const participantsInput = document.getElementById('idea-participants');
+      const participants = Math.max(1, Number(participantsInput.value) || 1);
+      const freq = Number(document.getElementById('idea-frequency').value) || 1;
+
+      document.getElementById('idea-freq-label').textContent = `주 ${freq}회`;
+
+      const unit = (CATEGORY_META[cat] && CATEGORY_META[cat].unitCo2) || 0.3;
+      const monthlyCo2 = +(participants * freq * 4 * unit).toFixed(1);
+      const trees = +(monthlyCo2 / 6.6).toFixed(1);
+
+      document.getElementById('calc-monthly-co2').textContent = `${monthlyCo2} kg CO₂`;
+      document.getElementById('calc-formula-desc').textContent = `${participants}명 × 주 ${freq}회 × 4주 × 회당 ${unit.toFixed(2)}kg 감축`;
+      document.getElementById('calc-tree-count').textContent = `약 ${trees} 그루`;
+
+      const badge = document.getElementById('forest-stage-badge');
+      const sprout = document.getElementById('stage-sprout');
+      const tree = document.getElementById('stage-tree');
+      const forest = document.getElementById('stage-forest');
+
+      sprout.classList.add('hidden');
+      tree.classList.add('hidden');
+      forest.classList.add('hidden');
+
+      if (monthlyCo2 < 10) {
+        sprout.classList.remove('hidden');
+        badge.textContent = '🌱 작은 새싹 단계';
+      } else if (monthlyCo2 < 40) {
+        tree.classList.remove('hidden');
+        badge.textContent = '🌳 든든한 큰 나무 단계';
+      } else {
+        forest.classList.remove('hidden');
+        badge.textContent = '🌲 무지개 울창한 숲 단계!';
+      }
+
+      return monthlyCo2;
+    }
+
+    function handleCreateIdea(event) {
+      event.preventDefault();
+
+      const author = document.getElementById('idea-author').value.trim();
+      const category = document.getElementById('idea-category').value;
+      const title = document.getElementById('idea-title').value.trim();
+      const problem = document.getElementById('idea-problem').value.trim();
+      const solution = document.getElementById('idea-solution').value.trim();
+      const step1 = document.getElementById('idea-step1').value.trim();
+      const step2 = document.getElementById('idea-step2').value.trim();
+      const step3 = document.getElementById('idea-step3').value.trim();
+
+      if (!author || !title || !problem || !solution) {
+        showToast('작성자, 제목, 문제, 해결 아이디어를 모두 입력해 주세요!');
+        return;
+      }
+
+      const co2Saved = recalculateIdeaCarbon();
+      const newCard = {
+        id: 'idea_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6),
+        author,
+        category,
+        title,
+        problem,
+        solution,
+        step1,
+        step2,
+        step3,
+        co2Saved,
+        likes: 0,
+        willDo: 0,
+        creative: 0,
+        updatedAt: Date.now()
+      };
+
+      window.ideas.unshift(newCard);
+      syncWallToRoom();
+
+      if (typeof confetti === 'function') {
+        confetti({ particleCount: 70, spread: 65, origin: { y: 0.65 } });
+      }
+
+      document.getElementById('idea-title').value = '';
+      document.getElementById('idea-problem').value = '';
+      document.getElementById('idea-solution').value = '';
+      document.getElementById('idea-step1').value = '';
+      document.getElementById('idea-step2').value = '';
+      document.getElementById('idea-step3').value = '';
+
+      switchTab(5);
+      showToast(
+        activeRoomCode
+          ? `🌱 아이디어가 등록되어 '${activeRoomCode}' 학급 탄소 지도에 실시간 공유되었습니다!`
+          : '🌱 아이디어 카드가 학급 탄소 지도에 등록되었습니다!'
+      );
+    }
+
+    // 6. 4단계 학급 탄소 지도 렌더링, 수정, 응원, 삭제
+    function setFilterCategory(cat) {
+      currentFilter = cat;
+      ['all', 'food', 'class', 'move', 'energy'].forEach(key => {
+        const btn = document.getElementById(`filter-${key}`);
+        if (!btn) return;
+        btn.className =
+          key === cat
+            ? 'px-3.5 py-2 rounded-xl bg-emerald-600 text-white font-extrabold text-xs sm:text-sm cursor-pointer'
+            : 'px-3.5 py-2 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 font-bold text-xs sm:text-sm cursor-pointer';
+      });
+      renderIdeas();
+    }
+
+    function updateClassStats() {
+      const totalIdeas = window.ideas.length;
+      const totalCo2 = window.ideas.reduce((sum, item) => sum + (Number(item.co2Saved) || 0), 0);
+      const totalReactions = window.ideas.reduce(
+        (sum, item) => sum + (item.likes || 0) + (item.willDo || 0) + (item.creative || 0),
+        0
+      );
+
+      document.getElementById('class-total-ideas').textContent = `${totalIdeas}개`;
+      document.getElementById('class-total-co2').textContent = `${totalCo2.toFixed(1)} kg CO₂`;
+      document.getElementById('class-total-reactions').textContent = `${totalReactions}개`;
+    }
+
+    function renderIdeas() {
+      const grid = document.getElementById('ideas-grid');
+      const keyword = (document.getElementById('search-idea-input').value || '').trim().toLowerCase();
+
+      const filtered = window.ideas.filter(item => {
+        const matchCat = currentFilter === 'all' || item.category === currentFilter;
+        const matchText =
+          !keyword ||
+          (item.title || '').toLowerCase().includes(keyword) ||
+          (item.author || '').toLowerCase().includes(keyword) ||
+          (item.solution || '').toLowerCase().includes(keyword);
+        return matchCat && matchText;
+      });
+
+      if (filtered.length === 0) {
+        grid.innerHTML = `
+          <div class="col-span-full bg-white rounded-3xl border-2 border-dashed border-slate-300 p-10 text-center">
+            <p class="font-extrabold text-slate-700 text-base">표시할 아이디어 카드가 없습니다.</p>
+            <p class="text-xs sm:text-sm text-slate-500 mt-1">3단계에서 새로운 아이디어를 등록하거나 검색어를 지워보세요!</p>
+          </div>
+        `;
+        return;
+      }
+
+      grid.innerHTML = filtered
+        .map(item => {
+          const meta = CATEGORY_META[item.category] || CATEGORY_META.food;
+          return `
+            <article class="bg-white rounded-3xl border border-slate-200 p-5 shadow-xs hover:shadow-md transition flex flex-col justify-between space-y-4">
+              <div class="space-y-3">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 font-extrabold text-xs">
+                    ${meta.label}
+                  </span>
+                  <span class="px-2.5 py-1 rounded-full bg-teal-600 text-white font-extrabold text-xs">
+                    -${Number(item.co2Saved || 0).toFixed(1)} kg CO₂/월
+                  </span>
+                </div>
+
+                <div>
+                  <h3 class="font-extrabold text-lg text-slate-900 leading-snug">${escapeHtml(item.title)}</h3>
+                  <p class="text-xs font-bold text-slate-500 mt-0.5">✍️ ${escapeHtml(item.author)}</p>
+                </div>
+
+                <div class="bg-slate-50 rounded-2xl p-3 text-xs space-y-1.5 border border-slate-100">
+                  <div><strong class="text-rose-700">문제:</strong> ${escapeHtml(item.problem)}</div>
+                  <div><strong class="text-emerald-700">해결:</strong> ${escapeHtml(item.solution)}</div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-1.5 text-[11px]">
+                  <div class="bg-emerald-50/70 rounded-xl p-2 border border-emerald-100">
+                    <div class="font-extrabold text-emerald-800">1. 준비</div>
+                    <div class="text-slate-700 mt-0.5">${escapeHtml(item.step1 || '-')}</div>
+                  </div>
+                  <div class="bg-teal-50/70 rounded-xl p-2 border border-teal-100">
+                    <div class="font-extrabold text-teal-800">2. 실천</div>
+                    <div class="text-slate-700 mt-0.5">${escapeHtml(item.step2 || '-')}</div>
+                  </div>
+                  <div class="bg-sky-50/70 rounded-xl p-2 border border-sky-100">
+                    <div class="font-extrabold text-sky-800">3. 다짐·점검·공유</div>
+                    <div class="text-slate-700 mt-0.5">${escapeHtml(item.step3 || '-')}</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 응원 스티커 & 수정/삭제 버튼 -->
+              <div class="pt-3 border-t border-slate-100 flex items-center justify-between gap-1.5">
+                <div class="flex flex-wrap gap-1">
+                  <button type="button" onclick="reactIdea('${item.id}', 'likes')" class="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-extrabold text-xs cursor-pointer">
+                    💚 ${item.likes || 0}
+                  </button>
+                  <button type="button" onclick="reactIdea('${item.id}', 'willDo')" class="px-2.5 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-extrabold text-xs cursor-pointer">
+                    🏃 ${item.willDo || 0}
+                  </button>
+                  <button type="button" onclick="reactIdea('${item.id}', 'creative')" class="px-2.5 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 font-extrabold text-xs cursor-pointer">
+                    💡 ${item.creative || 0}
+                  </button>
+                </div>
+
+                <div class="flex items-center gap-1 shrink-0">
+                  <button type="button" onclick="openEditIdeaModal('${item.id}')" class="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold cursor-pointer" title="카드 수정">
+                    ✏️
+                  </button>
+                  <button type="button" onclick="requestDeleteIdea('${item.id}')" class="w-8 h-8 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold cursor-pointer" title="카드 삭제">
+                    🗑️
+                  </button>
+                </div>
+              </div>
+            </article>
+          `;
+        })
+        .join('');
+    }
+
+    function reactIdea(id, field) {
+      const item = window.ideas.find(x => x.id === id);
+      if (!item) return;
+      item[field] = (item[field] || 0) + 1;
+      item.updatedAt = Date.now();
+      syncWallToRoom();
+      updateClassStats();
+      renderIdeas();
+    }
+
+    function openEditIdeaModal(id) {
+      const item = window.ideas.find(x => x.id === id);
+      if (!item) return;
+
+      document.getElementById('edit-idea-id').value = item.id;
+      document.getElementById('edit-idea-author').value = item.author || '';
+      document.getElementById('edit-idea-category').value = item.category || 'food';
+      document.getElementById('edit-idea-title').value = item.title || '';
+      document.getElementById('edit-idea-problem').value = item.problem || '';
+      document.getElementById('edit-idea-solution').value = item.solution || '';
+      document.getElementById('edit-idea-step1').value = item.step1 || '';
+      document.getElementById('edit-idea-step2').value = item.step2 || '';
+      document.getElementById('edit-idea-step3').value = item.step3 || '';
+
+      document.getElementById('modal-edit-idea').classList.remove('hidden');
+    }
+
+    function closeEditIdeaModal() {
+      document.getElementById('modal-edit-idea').classList.add('hidden');
+    }
+
+    function saveEditedIdea(event) {
+      event.preventDefault();
+      const id = document.getElementById('edit-idea-id').value;
+      const item = window.ideas.find(x => x.id === id);
+      if (!item) return;
+
+      item.author = document.getElementById('edit-idea-author').value.trim();
+      item.category = document.getElementById('edit-idea-category').value;
+      item.title = document.getElementById('edit-idea-title').value.trim();
+      item.problem = document.getElementById('edit-idea-problem').value.trim();
+      item.solution = document.getElementById('edit-idea-solution').value.trim();
+      item.step1 = document.getElementById('edit-idea-step1').value.trim();
+      item.step2 = document.getElementById('edit-idea-step2').value.trim();
+      item.step3 = document.getElementById('edit-idea-step3').value.trim();
+      item.updatedAt = Date.now();
+
+      syncWallToRoom();
+      closeEditIdeaModal();
+      updateClassStats();
+      renderIdeas();
+      showToast('✏️ 아이디어 카드가 수정되어 학급 탄소 지도에 반영되었습니다!');
+    }
+
+    function requestDeleteIdea(id) {
+      const btn = document.getElementById('btn-confirm-delete');
+      btn.onclick = () => {
+        deletedIdeaIds.add(id);
+        window.ideas = window.ideas.filter(item => item.id !== id);
+        syncWallToRoom();
+        closeDeleteModal();
+        updateClassStats();
+        renderIdeas();
+        showToast('아이디어 카드를 삭제했습니다.');
+      };
+      document.getElementById('modal-delete').classList.remove('hidden');
+    }
+
+    function closeDeleteModal() {
+      document.getElementById('modal-delete').classList.add('hidden');
+    }
+
+    // 7. 유틸리티
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function showToast(msg) {
+      const box = document.getElementById('toast-box');
+      const msgEl = document.getElementById('toast-msg');
+      if (!box || !msgEl) return;
+
+      msgEl.textContent = msg;
+      box.classList.remove('hidden');
+      clearTimeout(box._timer);
+      box._timer = setTimeout(() => {
+        box.classList.add('hidden');
+      }, 3400);
+    }
+
+    window.addEventListener('beforeunload', () => {
+      if (activeRoomCode) {
+        publishRelayMessage(activeRoomCode, { type: 'LEAVE_RELAY', sender: clientSessionId });
+      }
+    });
+
+    window.onload = function () {
+      renderStep1AndStep2Topics();
+      selectPracticeCategory('food');
+      updateDiagnosis();
+      recalculateIdeaCarbon();
+      updateClassStats();
+      renderIdeas();
+      updateRoomStatusUI();
+    };
+  </script>
+</body>
+</html>
